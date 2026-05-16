@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# OS & editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+.env.local
+
+# Environment — never commit secrets
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+server/dist/
+
+# Logs
+*.log
+server.log
+
+# Test/debug artifacts
+katseye_*.json
+romans*.json
+query_body.json
+query_result.txt
