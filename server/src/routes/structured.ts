@@ -4,7 +4,7 @@ import { runSparql, SparqlError, searchEntities, wdqsThrottled } from '../lib/wi
 import { bindingsToNodes, backfillLabels, type Node, type Unresolved } from '../lib/nodes.js'
 import { locateAndGuard, locateAndGuardAsserted } from '../lib/fallback.js'
 import { modelEnumerate, resolveCandidates } from '../lib/enumerate.js'
-import { verifyStructured, deriveExpectations, type VerificationReport, type Expectations } from '../lib/verify.js'
+import { verifyStructured, deriveExpectations, offEarthEntities, uriToQid, type VerificationReport, type Expectations } from '../lib/verify.js'
 import { collapseSubcomponents } from '../lib/rollup.js'
 import { buildSparql, type AgentStep } from '../lib/builder.js'
 import { runWithUsage, estimateCostUsd, formatUsage, type Usage } from '../lib/usage.js'
@@ -293,6 +293,30 @@ async function runStructuredPipeline(
     }
   }
 
+  // Off-Earth exclusion (see verify.ts offEarthEntities): a class-only match (volcano, crater,
+  // sea, ...) can pull in a namesake feature on another world, which still carries a real
+  // Wikidata coordinate — just not one that means anything on this app's Earth map. Filtered
+  // BEFORE verify, same reasoning as rollup: don't spend the verification+geocode budget on a
+  // result that can never be a valid node, and don't let it inflate the cardinality count either.
+  const offEarthUnresolved: Unresolved[] = []
+  if (bindings.length) {
+    const whereQids = [...new Set(bindings.map(b => uriToQid(b.where?.value)).filter((q): q is string => !!q))]
+    const offEarth = await offEarthEntities(whereQids)
+    if (offEarth.size) {
+      const removedNames = new Map<string, string>()
+      for (const b of bindings) {
+        const qid = uriToQid(b.where?.value)
+        if (qid && offEarth.has(qid) && !removedNames.has(qid)) removedNames.set(qid, b.whereLabel?.value ?? qid)
+      }
+      console.log(`[structured] excluded ${offEarth.size} off-Earth entities: ${[...removedNames.values()].join(', ')}`)
+      for (const name of removedNames.values()) offEarthUnresolved.push({ name, reason: 'off-Earth (located on another astronomical body, not a valid Earth-map result)' })
+      bindings = bindings.filter(b => {
+        const qid = uriToQid(b.where?.value)
+        return !(qid && offEarth.has(qid))
+      })
+    }
+  }
+
   let nodes: Node[]
   let unresolved: Unresolved[]
   let enumerator: 'structured' | 'asserted'
@@ -384,12 +408,20 @@ async function runStructuredPipeline(
     if (report.cardinality.verdict === 'over') {
       const overReason = `set-level over-collection: ${report.cardinality.structural} results vs an expected ~${report.cardinality.expected_min}-${report.cardinality.expected_max} (query likely too broad)`
       const seen = new Set<string>()
+      let freshlyDemoted = 0
       for (const b of chosenBindings) {
         const wUri = b.where?.value
         if (wUri && !seen.has(wUri)) {
           seen.add(wUri)
-          if (!demote.has(wUri)) demote.set(wUri, overReason)
+          if (!demote.has(wUri)) { demote.set(wUri, overReason); freshlyDemoted++ }
         }
+      }
+      // report.demoted was snapshotted inside verifyStructured before this block ran — update it
+      // so the returned/logged report reflects what ACTUALLY happened to the nodes, not a stale
+      // pre-demotion count (a `flagged` status with a "demoted: 0" count is misleading, even
+      // though the per-node membership_tier was already correctly set).
+      if (freshlyDemoted) {
+        report = { ...report, demoted: report.demoted + freshlyDemoted, notes: [...report.notes, `all ${demote.size} surviving results demoted to asserted membership (persistent over-collection, repair did not resolve it)`] }
       }
     }
 
@@ -417,6 +449,8 @@ async function runStructuredPipeline(
       }
     }
   }
+
+  if (offEarthUnresolved.length) unresolved = [...unresolved, ...offEarthUnresolved]
 
   // Guarantee human-readable pin names even if the generated SPARQL omitted ?whereLabel.
   await backfillLabels(nodes)

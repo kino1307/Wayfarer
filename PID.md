@@ -705,3 +705,36 @@ fallback}.ts`, with the legacy §6 machinery deleted.
   the first "fix" was plausible-sounding and untested against live WDQS before being written down;
   the correction stands as a reminder to verify a root-cause theory against the real endpoint before
   logging it as done, not just against internal reasoning.
+
+- **Off-Earth entities plotted as `verified` Earth pins (user-reported, live traffic — not a benchmark).**
+  A real run of "Active volcanoes in the Pacific Ring of Fire" plotted `Loki`, `Thor`, `Pele`, `Surt`,
+  `Prometheus`, `Amirani`, `Masubi`, `Maui`, `Zamama`, `Tonatiuh`, `Volund`, `Kanehekili` — all real
+  Wikidata entities, all typed `volcano`, all `coord_tier: verified` — as if they were real Ring-of-Fire
+  volcanoes on the map. Confirmed directly against Wikidata: every one is `wdt:P376` (located on
+  astronomical body) = **Io**, Jupiter's moon, famously named after Earth fire/thunder deities. Root
+  cause: an R9→R10 repair pass, trying to fix a recall gap (23 rows, expected 50-500), adopted a query
+  that dropped the ENTIRE geographic scope — from a 23-country `VALUES` list down to a bare
+  `?where wdt:P31/wdt:P279* wd:Q1330974` (any active volcano anywhere), because Wikidata models
+  "volcano" as a general geological class shared across worlds, not an Earth-specific one. R10's type
+  check correctly confirmed "yes, these are volcanoes" — it has no axis for "is this even on Earth."
+  This is a GENERAL Wikidata gotcha (also applies to craters, seas, mountains — any physical-geography
+  class with off-world namesakes), not volcano-specific, so the fix is a universal validity gate, not a
+  query-specific patch: `lib/verify.ts offEarthEntities` batch-checks every `?where` entity's own `P376`
+  and excludes (moves to `unresolved`, reason "off-Earth...") anything bound to a body other than Earth
+  (Q2), run once per pipeline in `routes/structured.ts` right after rollup and before verify — so
+  off-world pollution never counts toward cardinality or spends verification/geocode budget. Re-run of
+  the same query confirmed the fix (Io names: none of the 12 present in the output). A DIFFERENT LLM
+  run of the same query then surfaced a genuinely separate problem (see below) rather than the same one
+  recurring, which is itself a useful confirmation this fix and the over-collection fix are independent.
+  *Bug found while validating this fix, in the same session:* the re-run's second failure mode (query
+  correctly scoped to Earth countries this time, but massively over-collected — 1177 rows vs an
+  expected 50-600 — repair attempted and rejected as not-better) triggered the earlier over-collection
+  terminal-demotion fix correctly at the NODE level (all 1171 nodes correctly `asserted`, verified by
+  inspecting the raw output), but `meta.verification.demoted` still reported `0` — the report object's
+  `demoted` count is snapshotted inside `verifyStructured` before the later demotion block runs, so the
+  aggregate report undersold what had actually happened even though every individual node was honestly
+  flagged. Fixed by reassigning `report` with the corrected count and an explanatory note after the
+  terminal-demotion loop. Lower severity than the off-Earth bug (per-node badges were always correct;
+  only the summary count lagged), but real, and only surfaced because the same query was run twice with
+  different LLM outcomes — a reminder that a single validation run proves the mechanism works, not that
+  every path through it reports itself correctly.

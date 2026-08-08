@@ -21,7 +21,7 @@ import { runSparql, searchEntities, type SparqlBinding } from './wikidata.js'
 
 const WD_ENTITY = 'http://www.wikidata.org/entity/'
 
-function uriToQid(uri: string | undefined): string | null {
+export function uriToQid(uri: string | undefined): string | null {
   if (!uri || !uri.startsWith(WD_ENTITY)) return null
   const qid = uri.slice(WD_ENTITY.length)
   return /^Q\d+$/.test(qid) ? qid : null
@@ -117,6 +117,45 @@ async function conformingEntities(qids: string[], classQid: string): Promise<Set
         return await runSparql(sparql)
       } catch {
         return [] // skip this batch — better to under-count conformers than to crash the gate
+      }
+    }),
+  )
+  const out = new Set<string>()
+  for (const rows of results) for (const r of rows) {
+    const qid = uriToQid(r.e?.value)
+    if (qid) out.add(qid)
+  }
+  return out
+}
+
+const EARTH = 'Q2'
+
+// A general Wikidata modelling gotcha, not query-specific: physical-geography classes (volcano,
+// crater, sea, mountain, ...) are shared across the solar system, and namesake features on other
+// worlds carry real P31 membership in the same class — Io's volcanoes are famously named after
+// Earth fire/thunder deities (Loki, Thor, Pele, Surt, Prometheus) and are genuinely typed
+// "volcano", so a class-only match (no geographic constraint left to filter them, e.g. after a
+// repair widens a query) lets them through the type check with a real, verified-looking P625
+// coordinate — just plotted in the wrong world's coordinate frame onto an Earth map. Every node
+// this app emits is plotted on Earth (Leaflet/OSM per the README), so an entity whose OWN
+// "located on astronomical body" (P376) is bound to anything but Earth is never a valid result,
+// independent of the query. Checked once per pipeline run, not part of the R10 type/cardinality
+// axes — this is a validity gate, not a membership judgement.
+export async function offEarthEntities(qids: string[]): Promise<Set<string>> {
+  if (!qids.length) return new Set()
+  const BATCH = 100
+  const chunks: string[][] = []
+  for (let i = 0; i < qids.length; i += BATCH) chunks.push(qids.slice(i, i + BATCH))
+  const results = await Promise.all(
+    chunks.map(async chunk => {
+      const values = chunk.map(q => `wd:${q}`).join(' ')
+      const sparql =
+        `SELECT DISTINCT ?e WHERE { VALUES ?e { ${values} } ` +
+        `?e wdt:P376 ?body . FILTER(?body != wd:${EARTH}) }`
+      try {
+        return await runSparql(sparql)
+      } catch {
+        return [] // skip this batch — better to under-count than to crash the gate
       }
     }),
   )
