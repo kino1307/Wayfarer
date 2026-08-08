@@ -12,6 +12,11 @@ assert.equal(impliesLimit('South American capitals'), false, 'no number, no limi
 assert.equal(impliesLimit('top 5 cities'), true, '"top N" is a limit')
 assert.equal(impliesLimit('3 largest lakes'), true, '"N largest" is a limit')
 assert.equal(impliesLimit('nearest airports'), true, '"nearest" is a limit')
+assert.equal(impliesLimit('Which 5 African countries have the largest land area?'), true,
+  'digit and superlative separated by words is still a limit (the WDQS-timeout bug)')
+assert.equal(impliesLimit('the largest 5 economies in Europe'), true, 'superlative before the digit is still a limit')
+assert.equal(impliesLimit('Countries with more than 5 official languages'), false,
+  'an unrelated number near no superlative is not a limit')
 
 // computeEnvelope: a single same-name mis-resolution (London among a US cluster) must be TRIMMED so
 // it can't stretch the box to span the Atlantic and disable the guard.

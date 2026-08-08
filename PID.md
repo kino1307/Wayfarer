@@ -633,3 +633,75 @@ fallback}.ts`, with the legacy §6 machinery deleted.
   `server/src/lib/checks.ts` (`npx tsx src/lib/checks.ts`): the limit-regex and envelope-trim edge
   cases. (Security/auth hardening from the same session, BYOK-only key handling, per-IP rate limiting,
   scoped CORS, Groq removal, is deployment infra outside this contract and is not logged here.)
+
+- **Cost/latency benchmark (9 varied queries) exposed two real R10 gaps, not just cost tuning.**
+  A deliberately varied 9-query sweep ($0.39 total, live WDQS + LLM) targeting distinct failure
+  classes (cache reuse, duplicate-WHERE, non-point WHERE, ambiguous-entity resolution, count-limited
+  cardinality, large-cardinality cost stress, a repeat of a prior non-convergence class, a genuinely
+  unanswerable "vibe" query, and a previously-documented slow class) found:
+  1. **Silent over-collection could wear a `structural` badge.** "Most romantic small towns in Italy"
+     (no Wikidata property for "romantic") had the builder invent a population-range proxy for
+     "small," returning 6,201 towns — all coord-tier `verified`. The R10 gate correctly flagged
+     `cardinality: over` (expected ~5-30) and even attempted a repair, but when the repair wasn't
+     strictly better, the ORIGINAL over-collected result was kept and emitted with membership mostly
+     still `structural` — `over` fed the repair decision but never forced a final demotion. This is
+     exactly the silent-confident-wrong shape R8/R10 exist to prevent, at $0.08 / 4.7 minutes.
+  2. **Non-convergence could adopt a bare exploratory draft as the final answer.** "Rivers that form
+     international borders in Europe" non-converged (11 steps, no `answer`); the fallback used
+     whatever SPARQL was last tested, which happened to be a minimal shape-check draft with no
+     `?coord`/`?why`/`?whyArticle` at all. Every node was silently forced through the geocode ladder
+     (0 verified, 59 geocoded) while `verify` reported a clean "verified, 0 demoted" status — the
+     status looked fine; the underlying query was malformed for its purpose.
+  Two fixes, both R7-safe (capability/result branching, not content/shape):
+  - **R10 terminal demotion on persistent over-collection** (`routes/structured.ts`): after a repair
+    attempt (successful or not), if the surviving `cardinality.verdict` is still `over`, the whole
+    result set is demoted to `asserted` membership — per-row type checks can't catch this shape
+    (every row genuinely IS a "human settlement in Italy," just the wrong SCOPE), so the set-level
+    signal now has teeth instead of being advisory-only.
+  - **Output-contract gate on the builder's non-convergence fallback** (`lib/builder.ts`): a new
+    `hasCoordBinding` check (requires `?coord` bound via `wdt:P625`) is enforced both at the `answer`
+    step (pushed back for a fix, same discipline as the existing `everTested` gate) and on the
+    non-convergence "last tested" fallback, which now tracks a separate `lastGoodTested` and prefers
+    it; a tested-but-contract-violating draft is discarded in favour of the honest asserted fallback
+    rather than emitted as a pin-producing "answer" that can never earn a `verified` coordinate.
+  (4) **verify gate wall-time instrumentation** (`meta.verifyMs`, logged and returned) — a
+  Nobel-laureates query took 68.7s on only 4 builder steps (vs 17-24s for comparable 3-step queries
+  elsewhere in the same sweep), and the gap wasn't visible anywhere: R10's own batched WDQS calls
+  (type-conformance, geographic-containment, rollup) scale with result count and were invisible in
+  the builder-loop-only timing every prior latency pass (this whole section) was based on.
+
+- **Top-5-by-area WDQS timeout (item 3 above), root-caused and fixed — first diagnosis was wrong.**
+  The initial fix for the "Africa's 5 largest countries" timeout was an ORDER-BY-forces-materialisation
+  builder hint, on the theory that sorting runs the OPTIONAL coord/article joins over the full unsorted
+  set before LIMIT applies. Direct isolated WDQS testing (bypassing the LLM entirely — timing raw
+  SPARQL variants by hand) DISPROVED it: the identical flat `ORDER BY ... LIMIT 5` query with all three
+  OPTIONALs and the label SERVICE ran in ~1s, repeatably. The hint was removed rather than left on record
+  as a fix that wasn't one. Two REAL, distinct, isolated-and-confirmed causes instead:
+  1. **`impliesLimit` still silently stripped a real LIMIT.** "Which 5 African countries have the
+     LARGEST area" separates the digit and the superlative by several words; the existing regex
+     required adjacency (`\d+\s+largest`), so `impliesLimit` returned false and `stripStrayLimit`
+     removed the builder's correct `LIMIT 5` — turning a ~1s bounded query into an unbounded sort over
+     the whole class. Confirmed directly: identical query, `LIMIT 5` = ~1s, no `LIMIT` = 40s+ timeout,
+     every time. Fixed (`lib/builder.ts impliesLimit`) with a bounded word-gap (≤4 words digit→
+     superlative, ≤3 reverse) instead of strict adjacency; new cases added to `lib/checks.ts`,
+     including a negative ("more than 5 official languages" must NOT imply a limit) to guard the
+     original bare-digit bug this function already exists to prevent.
+  2. **`BIND(?where AS ?why)` + a duplicate self-referential `?whyArticle` OPTIONAL is a severe,
+     confirmed Blazegraph performance trap.** For a query with no distinct WHY (the country IS the
+     answer — the system prompt's own "intrinsically-located things" case, alongside battles and
+     monuments), the builder sometimes wrote `BIND(?where AS ?why)` as a workaround to satisfy the
+     "always bind ?why" instruction, followed by the standard `OPTIONAL { ?whyArticle schema:about
+     ?why ; ... }` — a near-duplicate of the `?whereArticle` OPTIONAL, just aliased. Isolated component-
+     by-component: the GROUP BY/MAX subquery alone (~1.5s), the subquery + both OPTIONALs (~1s), the
+     subquery + label SERVICE (~0.5s), and the subquery + OPTIONALs + label SERVICE with NO bind/why-
+     duplicate (~1s) were all fast; adding the `BIND(?where AS ?why)` + duplicate `whyArticle` OPTIONAL
+     back in was the ONLY variant that reproduced the 40-45s timeout, every time. Fixed at the prompt
+     level (`lib/builder.ts` system prompt): the ?why contract now explicitly says to OMIT ?why/
+     ?whyLabel/?whyArticle entirely for this case rather than self-bind, and names the trap so the
+     agent doesn't reach for the workaround again.
+  Verified end-to-end after both fixes: the original failing query now completes in **18.5s**
+  (`enumerator=structured`, 5/5 `verified`, no error, `LIMIT 5` intact, no `?why` emitted) — down from
+  64-91s of timeout-then-asserted-fallback across three prior attempts. *Lesson for this log itself:*
+  the first "fix" was plausible-sounding and untested against live WDQS before being written down;
+  the correction stands as a reminder to verify a root-cause theory against the real endpoint before
+  logging it as done, not just against internal reasoning.

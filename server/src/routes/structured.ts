@@ -215,6 +215,7 @@ interface PipelineResult {
     verification: VerificationReport | null
     repaired: boolean
     builder: { steps: number; converged: boolean; trace: Array<{ tool: string; thought?: string }> }
+    verifyMs?: number
     rollup?: { collapsed: number }
     usage?: Usage & { costUsd: number }
     cached?: boolean
@@ -299,6 +300,7 @@ async function runStructuredPipeline(
   let finalSparql = sparql
   let finalRows = bindings.length
   let repaired = false
+  let verifyMs = 0
 
   if (bindings.length === 0) {
     // Wikidata expressed/found nothing → the MODEL proposes the set (PID R2), but WIKIDATA still
@@ -322,7 +324,9 @@ async function runStructuredPipeline(
     // ladder — so a repair can swap the query without paying to locate a doomed result set.
     onProgress('Verifying results…')
     const exp = await expectations // prefetched during the build (no extra wait here)
+    const tVerify = Date.now()
     let { demote, report } = await verifyStructured(bindings, query, query_role, apiKey, model, exp)
+    verifyMs = Date.now() - tVerify
     let chosenBindings = bindings
 
     // Failed gate → one bounded repair fed back into the R9 builder (PID R10 → R9).
@@ -349,7 +353,9 @@ async function runStructuredPipeline(
           }
         }
         if (repBindings.length) {
+          const tVerify2 = Date.now()
           const v2 = await verifyStructured(repBindings, query, query_role, apiKey, model, exp)
+          verifyMs += Date.now() - tVerify2
           if (isBetter(v2.report, report)) {
             console.log(`[structured] repair adopted (${report.status}→${v2.report.status}, rows ${bindings.length}→${repBindings.length})`)
             chosenBindings = repBindings
@@ -365,6 +371,25 @@ async function runStructuredPipeline(
         }
       } catch (e) {
         console.error('[structured] repair failed:', e instanceof Error ? e.message : e)
+      }
+    }
+
+    // Set-level over-collection distrust (PID R10 hardening). Repair (above) already had its
+    // shot at fixing an over-broad query; if the surviving verdict is STILL 'over', per-row
+    // checks can't catch the rest — every row can be a genuine instance of the class the builder
+    // queried on (a real "human settlement in Italy"), just the wrong SCOPE for the actual
+    // request (there's no Wikidata property for "romantic"). Demote the whole survivor set to
+    // asserted rather than let a query this far outside its own expected range wear a
+    // `structural` badge — never dropped (R5), just honestly downgraded (R6/R8).
+    if (report.cardinality.verdict === 'over') {
+      const overReason = `set-level over-collection: ${report.cardinality.structural} results vs an expected ~${report.cardinality.expected_min}-${report.cardinality.expected_max} (query likely too broad)`
+      const seen = new Set<string>()
+      for (const b of chosenBindings) {
+        const wUri = b.where?.value
+        if (wUri && !seen.has(wUri)) {
+          seen.add(wUri)
+          if (!demote.has(wUri)) demote.set(wUri, overReason)
+        }
       }
     }
 
@@ -403,7 +428,8 @@ async function runStructuredPipeline(
   console.log(
     `[structured] rows=${finalRows} enumerator=${enumerator} nodes=${nodes.length} repaired=${repaired} ` +
       `tiers=${JSON.stringify(tiers)} unresolved=${unresolved.length}` +
-      (verification ? ` verify=${verification.status} demoted=${verification.demoted}` : ''),
+      (verification ? ` verify=${verification.status} demoted=${verification.demoted}` : '') +
+      (verifyMs ? ` verifyMs=${verifyMs}` : ''),
   )
   if (verification?.notes.length) {
     for (const note of verification.notes) console.log(`[structured]   verify: ${note}`)
@@ -422,6 +448,7 @@ async function runStructuredPipeline(
       verification,
       repaired,
       builder: { steps: steps.length, converged, trace: steps.map(s => ({ tool: s.tool, thought: s.thought })) },
+      ...(verifyMs ? { verifyMs } : {}),
       ...(collapsed ? { rollup: { collapsed } } : {}),
     },
   }

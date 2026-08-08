@@ -19,10 +19,19 @@ const MAX_STEPS = 11
 // "single"). A bare digit is NOT enough: "World War 2" / "Group of 7 capitals" contain a number but
 // ask for the COMPLETE set, and the old `\d+` rule wrongly suppressed stripping for them, letting a
 // stray LIMIT silently cap recall. When in doubt we strip (completeness is the contract).
+//
+// The digit and the superlative need NOT be adjacent — "Which 5 African countries have the
+// LARGEST area" separates them by several words, and a strict-adjacency check (the original
+// `\d+\s+largest` form) missed it, silently stripping a real user LIMIT. That turned a fast
+// top-5 query into an unbounded ORDER BY over the whole class, which then timed out against WDQS
+// (confirmed directly: identical query, LIMIT 5 = ~1s, no LIMIT = 40s+ timeout). A bounded
+// word-gap keeps this from over-firing on an unrelated number elsewhere in a longer query.
+const SUPERLATIVE = '(?:largest|biggest|smallest|tallest|highest|longest|nearest|closest|oldest|newest|most|best)'
 export function impliesLimit(query: string): boolean {
   return (
     /\b(top|first)\s+\d+\b/i.test(query) ||
-    /\b\d+\s+(largest|biggest|smallest|tallest|highest|longest|nearest|closest|oldest|newest|most|best)\b/i.test(query) ||
+    new RegExp(`\\b\\d+\\b(?:\\s+\\w+){0,4}\\s+${SUPERLATIVE}\\b`, 'i').test(query) ||
+    new RegExp(`\\b${SUPERLATIVE}\\b(?:\\s+\\w+){0,3}\\s+\\d+\\b`, 'i').test(query) ||
     /\b(nearest|closest|single)\b/i.test(query)
   )
 }
@@ -35,6 +44,15 @@ function stripStrayLimit(query: string, sparql: string): string {
 
 // The model occasionally wraps its JSON action in prose. Recover by extracting the first
 // balanced {...} object before parsing.
+// A query that never binds ?coord (via wdt:P625) can never produce a 'verified'-tier pin — every
+// result would be forced through the geocode/approximate fallback ladder. This is the minimum bar
+// for a query to be usable as a real answer, not just an exploratory shape-check draft — the agent
+// routinely tests bare entity-matching drafts before adding the full output contract, and on
+// non-convergence that bare draft must not be mistaken for a finished query.
+function hasCoordBinding(sparql: string): boolean {
+  return /\?coord\b/.test(sparql) && /wdt:P625/.test(sparql)
+}
+
 function parseAction(raw: string): { tool?: string; thought?: string; args?: Record<string, unknown> } | null {
   try {
     return parseJsonResponse(raw) as { tool?: string; thought?: string; args?: Record<string, unknown> }
@@ -68,7 +86,13 @@ label service but are only returned if selected, else pins show raw QIDs):
 - ?whereArticle  OPTIONAL { ?whereArticle schema:about ?where ; schema:isPartOf <https://en.wikipedia.org/> }
 - ?why    the entity that makes ?where relevant (the country a capital belongs to; the member whose
           birthplace this is) — ALWAYS bind it when one exists, never as a throwaway helper var; OMIT
-          only for intrinsically-located things (battles, monuments)
+          entirely (?why, ?whyLabel, ?whyArticle and its OPTIONAL) for intrinsically-located things
+          where the plotted entity IS the answer with nothing else "relating" it (battles, monuments,
+          "largest/smallest N of X" rankings of the plotted class itself). NEVER write
+          \`BIND(?where AS ?why)\` as a workaround to satisfy this contract when there is no distinct
+          WHY — a duplicate self-referential \`OPTIONAL { ?whyArticle schema:about ?why ; ... }\` next to
+          the near-identical \`?whereArticle\` OPTIONAL is a severe, confirmed WDQS performance trap
+          (a fast <2s query becomes a 40s+ timeout) even though it looks harmless. If in doubt, omit.
 - ?whyArticle  OPTIONAL { ?whyArticle schema:about ?why ; schema:isPartOf <https://en.wikipedia.org/> }
 End the WHERE block with: SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul". }
 Keep ?coord and the article binds OPTIONAL (missing data is reported, not dropped). No LIMIT unless
@@ -205,6 +229,11 @@ export async function buildSparql(
   const steps: AgentStep[] = []
   let lastTested: string | null = null
   let lastTestedRows = -1
+  // Same tracking, but only among drafts that satisfy the output contract (has ?coord) — the
+  // non-convergence fallback below must prefer this over lastTested, or it can adopt a bare
+  // shape-check draft that was never meant to be a final answer.
+  let lastGoodTested: string | null = null
+  let lastGoodTestedRows = -1
   let everTested = false
   let llmMsTotal = 0
   let toolMsTotal = 0
@@ -233,6 +262,10 @@ export async function buildSparql(
         messages.push({ role: 'user', content: 'answer needs args.sparql binding ?where. Keep going.' })
         continue
       }
+      if (!hasCoordBinding(sparql)) {
+        messages.push({ role: 'user', content: 'answer is missing OPTIONAL { ?where wdt:P625 ?coord } — every result needs a chance at a real coordinate. Add it, test, then answer.' })
+        continue
+      }
       if (!everTested) {
         messages.push({ role: 'user', content: 'You must test_sparql before answering. Test this query first.' })
         continue
@@ -253,10 +286,15 @@ export async function buildSparql(
       if (rows != null) everTested = true
       console.log(`[builder]   test → rows=${rows} (${((Date.now() - tTool) / 1000).toFixed(1)}s)`)
       opts.onProgress?.(rows != null ? `Query returned ${rows} rows — refining…` : 'Query errored — fixing…')
-      if (rows != null && rows >= 0 && (rows > 0 || lastTestedRows < 0)) {
+      const testedSparql = typeof action.args?.sparql === 'string' ? (action.args.sparql as string).trim() : ''
+      if (rows != null && rows >= 0 && testedSparql && (rows > 0 || lastTestedRows < 0)) {
         // Prefer the most recent query that actually returned rows; else keep any tested one.
-        lastTested = typeof action.args?.sparql === 'string' ? (action.args.sparql as string).trim() : lastTested
+        lastTested = testedSparql
         lastTestedRows = rows
+      }
+      if (rows != null && rows >= 0 && testedSparql && hasCoordBinding(testedSparql) && (rows > 0 || lastGoodTestedRows < 0)) {
+        lastGoodTested = testedSparql
+        lastGoodTestedRows = rows
       }
     }
 
@@ -274,25 +312,32 @@ export async function buildSparql(
 
   // Non-convergence: one last forced attempt to get a final query out of the model, then fall
   // back to the best query we actually tested. Only fail hard if nothing testable ever emerged.
-  if (!lastTested) {
+  if (!lastGoodTested) {
     const raw = await callClaudeMessages(
       apiKey,
       model,
       SYSTEM,
-      [...messages, { role: 'user', content: 'Stop exploring. Output your best final query now as {"tool":"answer","args":{"sparql":"..."}}.' }],
+      [...messages, { role: 'user', content: 'Stop exploring. Output your best final query now as {"tool":"answer","args":{"sparql":"..."}}, with OPTIONAL { ?where wdt:P625 ?coord } bound.' }],
       1500,
       true,
     )
     const action = parseAction(raw)
     const sparql = typeof action?.args?.sparql === 'string' ? (action.args.sparql as string).trim() : ''
-    if (sparql.includes('?where')) {
+    if (sparql.includes('?where') && hasCoordBinding(sparql)) {
       steps.push({ tool: 'answer', thought: 'forced final', observation: 'answered (forced)' })
       return { sparql: stripStrayLimit(query, sparql), steps, converged: false }
     }
   }
-  if (lastTested && lastTested.includes('?where')) {
-    console.log(`[builder] non-convergence; using last tested query (rows=${lastTestedRows})`)
-    return { sparql: stripStrayLimit(query, lastTested), steps, converged: false }
+  // Only a query that satisfies the output contract (has a chance at a real coordinate) is safe
+  // to use as a final answer — a bare shape-check draft (missing ?coord) is not, even if it
+  // returned rows; using it would silently force every result through the geocode/approximate
+  // ladder instead of the honest asserted fallback below.
+  if (lastGoodTested && lastGoodTested.includes('?where')) {
+    console.log(`[builder] non-convergence; using last CONTRACT-COMPLIANT tested query (rows=${lastGoodTestedRows})`)
+    return { sparql: stripStrayLimit(query, lastGoodTested), steps, converged: false }
+  }
+  if (lastTested) {
+    console.log(`[builder] non-convergence; last tested query (rows=${lastTestedRows}) is missing ?coord — discarding rather than emitting a query that can never verify`)
   }
   // No usable query at all → return empty rather than throwing, so the route degrades to the
   // asserted model-enumeration fallback (R2/R6) instead of hard-failing the request.
