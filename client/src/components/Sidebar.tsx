@@ -145,25 +145,8 @@ export function Sidebar({
                 letterSpacing: '0.05em',
               }}
             >
-              {result.locations.length} locations
+              {result.locations.length} nodes
             </span>
-            {result.wikiSource && (
-              <div
-                style={{
-                  fontFamily: "'DM Mono', monospace",
-                  fontSize: 10,
-                  color: 'var(--accent)',
-                  marginTop: 1,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  maxWidth: 180,
-                }}
-                title={result.wikiSource}
-              >
-                ↗ {result.wikiSource}
-              </div>
-            )}
           </div>
           <button
             onClick={onAnalyse}
@@ -205,7 +188,93 @@ export function Sidebar({
             </div>
           </div>
         ) : result ? (
-          result.locations.length > 0 ? (
+          <>
+          {result.enumerator === 'asserted' && result.locations.length > 0 && (
+            <div
+              style={{
+                margin: '10px 12px',
+                padding: '8px 10px',
+                borderRadius: 6,
+                background: 'rgba(232,163,61,0.10)',
+                border: '1px solid rgba(232,163,61,0.4)',
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: "'DM Mono', monospace",
+                  fontSize: 10,
+                  color: '#9a6a1a',
+                  letterSpacing: '0.04em',
+                  marginBottom: 4,
+                }}
+              >
+                ⚠ Model-suggested results
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--ink-muted)', lineHeight: 1.5 }}>
+                Wikidata had no structured data for this query, so these were generated from
+                the model's knowledge. Treat them — and their coordinates — with scepticism.
+              </div>
+            </div>
+          )}
+          {result.verification && (result.verification.status === 'flagged' || result.repaired) && (
+            <div
+              style={{
+                margin: '10px 12px',
+                padding: '8px 10px',
+                borderRadius: 6,
+                background: 'rgba(91,124,217,0.10)',
+                border: '1px solid rgba(91,124,217,0.4)',
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: "'DM Mono', monospace",
+                  fontSize: 10,
+                  color: '#3f5bbf',
+                  letterSpacing: '0.04em',
+                  marginBottom: 4,
+                }}
+              >
+                {result.verification.status === 'flagged' ? '⚖ Verification flagged this result' : '✓ Verified'}
+                {result.repaired ? ' · ↻ query auto-repaired' : ''}
+              </div>
+              {result.verification.notes.length > 0 && (
+                <ul style={{ margin: 0, paddingLeft: 16, fontSize: 11, color: 'var(--ink-muted)', lineHeight: 1.55 }}>
+                  {result.verification.notes.map((note, i) => (
+                    <li key={i}>{note}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+          {result.unresolved && result.unresolved.length > 0 && (
+            <div
+              style={{
+                margin: '10px 12px',
+                padding: '8px 10px',
+                borderRadius: 6,
+                background: 'rgba(232,163,61,0.10)',
+                border: '1px solid rgba(232,163,61,0.4)',
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: "'DM Mono', monospace",
+                  fontSize: 10,
+                  color: '#9a6a1a',
+                  letterSpacing: '0.04em',
+                  marginBottom: 4,
+                }}
+              >
+                ⚠ {result.unresolved.length} unresolved — no coordinate found
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--ink-muted)', lineHeight: 1.5 }}>
+                {result.unresolved.slice(0, 12).map(u => u.name).join(', ')}
+                {result.unresolved.length > 12 ? `, +${result.unresolved.length - 12} more` : ''}
+              </div>
+            </div>
+          )}
+          {result.locations.length > 0 ? (
             result.locations.map((loc) => (
               <ResultItem
                 key={`${loc.name}::${loc.country}`}
@@ -225,7 +294,8 @@ export function Sidebar({
             >
               No locations found
             </div>
-          )
+          )}
+          </>
         ) : (
           <div
             style={{

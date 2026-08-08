@@ -1,3 +1,4 @@
+import { nodeTrust } from '../types'
 import type { Location } from '../types'
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
 
 export function ResultItem({ location, selected, onClick }: Props) {
   const meta = [location.country, location.year].filter(Boolean).join(' · ')
+  const tierLabel = nodeTrust(location).short ?? undefined
 
   return (
     <button
@@ -46,6 +48,25 @@ export function ResultItem({ location, selected, onClick }: Props) {
         }}
       >
         {location.name}
+        {tierLabel && (
+          <span
+            style={{
+              marginLeft: 6,
+              fontFamily: "'DM Mono', monospace",
+              fontSize: 9,
+              fontWeight: 400,
+              color: '#9a6a1a',
+              background: 'rgba(232,163,61,0.16)',
+              border: '1px solid rgba(232,163,61,0.5)',
+              borderRadius: 4,
+              padding: '1px 5px',
+              letterSpacing: '0.02em',
+              verticalAlign: 'middle',
+            }}
+          >
+            ⚠ {tierLabel}
+          </span>
+        )}
       </div>
       {meta && (
         <div

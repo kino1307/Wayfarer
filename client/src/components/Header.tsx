@@ -27,7 +27,7 @@ export function Header({ isDark, onToggleDark }: Props) {
             letterSpacing: '-0.5px',
           }}
         >
-          Terr
+          Orb
         </span>
         <span
           style={{
@@ -37,7 +37,7 @@ export function Header({ isDark, onToggleDark }: Props) {
             letterSpacing: '-0.5px',
           }}
         >
-          iq
+          is
         </span>
       </div>
 
@@ -65,7 +65,7 @@ export function Header({ isDark, onToggleDark }: Props) {
             letterSpacing: '0.02em',
           }}
         >
-          Leaflet · OSM · Claude
+          Wikidata · OSM · Claude
         </span>
         <button
           onClick={onToggleDark}

@@ -49,7 +49,7 @@ export function DisclaimerModal({ onDismiss }: Props) {
             color: 'var(--ink)',
             margin: '6px 0 0',
           }}>
-            Pins aren't always perfect
+            How Orbis maps your query
           </h2>
         </div>
 
@@ -63,17 +63,33 @@ export function DisclaimerModal({ onDismiss }: Props) {
           gap: 12,
         }}>
           <p style={{ margin: 0 }}>
-            Terriq uses Claude to find and map locations, backed up by Wikipedia where possible.
-            For well-documented stuff like historical events, established artists, and geography, it tends to do a decent job.
+            Orbis uses Claude to translate your query into a <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>Wikidata</strong> query — a
+            structured, community-maintained knowledge base — then plots what Wikidata returns.
+            For well-modelled topics (capitals, members of a group, battles) the results are precise and grounded.
           </p>
           <p style={{ margin: 0 }}>
-            For <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>recent or niche topics</strong> (think newly formed groups, emerging artists, or anything from the past year or so),
-            the model can sound very confident while being completely wrong. It will sometimes invent birthplaces, members, or locations that do not exist.
-            Wikipedia grounding cuts this down significantly, but it is not foolproof.
+            When Wikidata has no data for a query (subjective or very recent topics), Orbis falls
+            back to <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>the model's own knowledge</strong>. The model can sound confident while being
+            completely wrong — inventing places or members that do not exist. Those results are flagged.
           </p>
-          <p style={{ margin: 0 }}>
-            Hollow pins are unverified and worth treating with a bit of scepticism. Filled pins have been cross-checked against Wikipedia and are generally more reliable, though still worth a second look for anything important.
-          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginTop: 2 }}>
+            {[
+              { dot: 'solid var(--accent)', fill: 'var(--accent)', label: 'Verified', desc: 'coordinate and membership confirmed by Wikidata' },
+              { dot: 'solid #e8a33d', fill: '#e8a33d', label: 'Unverified location', desc: 'real entity, but coordinate is geocoded or estimated' },
+              { dot: 'dashed #e8a33d', fill: 'transparent', label: 'Model-suggested', desc: "the model's own guess — treat with scepticism" },
+            ].map(row => (
+              <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                <span style={{
+                  width: 11, height: 11, borderRadius: '50%', flexShrink: 0,
+                  background: row.fill, border: `2px ${row.dot}`,
+                }} />
+                <span style={{ fontSize: 13 }}>
+                  <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>{row.label}</strong>
+                  <span style={{ color: 'var(--ink-faint)' }}> — {row.desc}</span>
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
         <button

@@ -22,6 +22,10 @@ server/dist/
 # Logs
 *.log
 server.log
+dev.out
+
+# Local dev tooling
+.claude/
 
 # Test/debug artifacts
 katseye_*.json

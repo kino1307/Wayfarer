@@ -6,8 +6,6 @@ interface Props {
 
 const DOT_COLORS: Record<StatusState['phase'], string> = {
   idle: 'var(--ink-faint)',
-  titles: 'var(--loading)',
-  wiki: 'var(--loading)',
   locations: 'var(--loading)',
   analysing: 'var(--loading)',
   done: 'var(--accent)',
@@ -15,9 +13,7 @@ const DOT_COLORS: Record<StatusState['phase'], string> = {
 }
 
 export function StatusBar({ status }: Props) {
-  const isLoading = ['titles', 'wiki', 'locations', 'analysing'].includes(
-    status.phase
-  )
+  const isLoading = ['locations', 'analysing'].includes(status.phase)
 
   return (
     <div

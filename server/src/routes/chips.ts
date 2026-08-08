@@ -7,7 +7,7 @@ router.post('/', async (req: Request, res: Response) => {
   const { history, model, random } = req.body as { history: string[]; model: string; random?: boolean }
   const apiKey = req.headers['x-api-key'] as string
 
-  const VALID_MODELS = new Set(['claude-haiku-4-5-20251001', 'claude-sonnet-4-6', 'claude-opus-4-6'])
+  const VALID_MODELS = new Set(['claude-haiku-4-5-20251001', 'claude-sonnet-4-6', 'claude-opus-4-8', 'claude-opus-4-6'])
 
   if (!apiKey) return res.status(401).json({ error: 'Missing API key' })
   if (!model) return res.status(400).json({ error: 'Missing model' })

@@ -1,6 +1,6 @@
-# Terriq
+# Orbis
 
-Spatial intelligence tool — type any query and map every relevant location globally.
+Spatial intelligence tool. Type any query and it maps every relevant location worldwide.
 
 ## Quick start
 
@@ -22,11 +22,11 @@ Open [http://localhost:5173](http://localhost:5173)
 
 ## Stack
 
-- **Client** — React 18, TypeScript, Vite, Tailwind CSS, Leaflet / React-Leaflet
-- **Server** — Node.js, Express, TypeScript, tsx
-- **AI** — Anthropic (Haiku / Sonnet / Opus)
-- **Map tiles** — OpenStreetMap (free, no key required)
-- **Knowledge** — Wikipedia REST API (free, no key required)
+- **Client:** React 18, TypeScript, Vite, Tailwind CSS, Leaflet / React-Leaflet
+- **Server:** Node.js, Express, TypeScript, tsx
+- **AI:** Anthropic (Haiku / Sonnet / Opus)
+- **Map tiles:** OpenStreetMap (free, no key required)
+- **Knowledge:** Wikipedia REST API (free, no key required)
 
 ## How it works
 

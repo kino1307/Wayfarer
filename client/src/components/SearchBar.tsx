@@ -142,7 +142,7 @@ export function SearchBar({ value, onChange, onSearch, onCancel, loading, model,
         )}
       </div>
 
-      {/* Model cap disclaimer */}
+      {/* Source line — the model translates the query; Wikidata returns the full set */}
       <div
         style={{
           padding: '0 16px 8px',
@@ -170,18 +170,7 @@ export function SearchBar({ value, onChange, onSearch, onCancel, loading, model,
             letterSpacing: '0.03em',
           }}
         >
-          {modelInfo.maxTokens.toLocaleString()} token output cap
-        </span>
-        <span style={{ color: 'var(--border-strong)', fontSize: 10 }}>·</span>
-        <span
-          style={{
-            fontFamily: "'DM Mono', monospace",
-            fontSize: 10,
-            color: 'var(--ink-faint)',
-            letterSpacing: '0.03em',
-          }}
-        >
-          ~{modelInfo.approxNodes} nodes max
+          translates your query → Wikidata
         </span>
       </div>
     </div>

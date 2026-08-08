@@ -1,0 +1,42 @@
+Build Orbis to satisfy its contract in C:\Users\james\Desktop\orbis\PID.md.
+
+OBJECTIVE
+Turn the app into: user query -> verified list of nodes plotted on the map,
+governed entirely by PID.md. The canonical acceptance test is "South American
+capitals" -> a node at every SA capital and only SA capitals (precision and recall,
+both directions), judged against the adjudicated canonical set per section 1.
+
+CONTRACT
+PID.md is the source of truth. Rules R1-R8 are invariants, not suggestions. If
+implementation pressure pushes against a rule, STOP and either find the
+shape-agnostic path or amend PID.md deliberately with the trade-off written into
+the amendment log. Never quietly special-case. No branching on source content/shape
+(R7). Failures and uncertainty are loud, never silent (R6).
+
+PHASES (iterate on each until it is proven, then move on)
+1. Spike: structured path only ("South American capitals"). Wikidata SPARQL
+   enumerate+locate in one query -> WHERE-keyed nodes with coord_tier + membership_tier
+   + where_url/why_url (section 5 schema) -> unresolved[] report. Stub the geocoded/approximate
+   tiers and the unverified-badge UI.
+2. Generalise: prove the SAME path works unchanged on "Beatles birthplaces" (multi-WHY,
+   duplicate WHERE) and a non-point case (WWI battlefields). No query-type branches.
+3. Fallback tiers + UI: implement geocoded/approximate (R4) with the visually-distinct
+   unverified marker + badge; surface unresolved/ambiguous loudly in the client.
+4. Demolition: remove the section 6 kill-list (isListArticle, link-harvest, the 80-cap +
+   alphabetical slice, primary-vs-linked prompt rule, grounded-vs-memory split,
+   model-coords-as-truth, silent `dropped`).
+
+DEFINITION OF DONE
+- "South American capitals" plots every SA capital, none spurious, each with a real
+  coordinate (verified tier) and a working source link; any drop appears in unresolved[].
+- "Beatles birthplaces" and a non-point query run through the identical pipeline.
+- The section 6 kill-list is gone from the codebase.
+- PID.md and code are consistent; any deviation is logged as an amendment.
+
+WORKING AGREEMENT
+- After each phase: restart the dev server and post the client URL so I can see it live.
+- Verify by actually running the app and reading the server logs, not by assertion.
+  Report what the map shows and what the logs say, including failures.
+- Keep a short running note of decisions/adjudications (e.g. La Paz vs Sucre) as you go.
+- Pause for my input only on genuine product calls (acceptance-set adjudication,
+  reversing a directional decision); otherwise iterate to done.

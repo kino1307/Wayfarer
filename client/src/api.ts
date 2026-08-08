@@ -1,4 +1,4 @@
-import type { Location } from './types'
+import type { Location, StructuredResult } from './types'
 
 const BASE = import.meta.env.VITE_API_BASE ?? ''
 
@@ -9,148 +9,70 @@ function headers(apiKey: string) {
   }
 }
 
-export async function fetchTitles(
+// Structured path (PID): query → Wikidata nodes + unresolved report.
+export async function fetchStructured(
   query: string,
   model: string,
   apiKey: string,
   signal?: AbortSignal,
-): Promise<string[]> {
-  const res = await fetch(`${BASE}/api/titles`, {
+): Promise<StructuredResult> {
+  const res = await fetch(`${BASE}/api/structured`, {
     method: 'POST',
     headers: headers(apiKey),
     body: JSON.stringify({ query, model }),
     signal,
   })
-  if (!res.ok) throw new Error('Failed to fetch titles')
-  const data = await res.json() as { titles: string[] }
-  return data.titles
-}
-
-export async function fetchWikiArticle(
-  titles: string[],
-  onProgress?: (msg: string) => void,
-  signal?: AbortSignal,
-): Promise<{ title: string; text: string } | null> {
-  const encoded = titles.map(t => encodeURIComponent(t)).join('|')
-  const res = await fetch(`${BASE}/api/wikipedia/fetch?titles=${encoded}`, { signal })
-  if (!res.ok || !res.body) return null
-
-  const reader = res.body.getReader()
-  const decoder = new TextDecoder()
-  let buffer = ''
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop() ?? ''
-
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue
-      try {
-        const event = JSON.parse(line.slice(6)) as {
-          type: string
-          message?: string
-          data?: { title: string; text: string } | null
-        }
-        if (event.type === 'progress' && event.message) {
-          onProgress?.(event.message)
-        } else if (event.type === 'result') {
-          reader.cancel().catch(() => {})
-          return event.data ?? null
-        }
-      } catch {
-        // malformed line — skip
-      }
-    }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Structured query failed' })) as { error: string }
+    throw new Error(err.error ?? 'Structured query failed')
   }
-  return null
+  return await res.json() as StructuredResult
 }
 
-export interface StreamDoneMeta {
-  mode: 'grounded' | 'memory'
-  dropped: number
-  wikiSource?: string
-}
-
-// Stream locations from /api/query via SSE, calling callbacks as events arrive
-export async function streamLocations(
+// Streaming variant: reads NDJSON progress events, calls onProgress for each, resolves with
+// the final result. Same StructuredResult shape as fetchStructured.
+export async function fetchStructuredStream(
   query: string,
   model: string,
   apiKey: string,
-  wikiContext: { title: string; text: string } | undefined,
-  onLocation: (loc: Location) => void,
-  onDone: (meta: StreamDoneMeta) => void,
-  onError: (msg: string) => void,
+  onProgress: (message: string) => void,
   signal?: AbortSignal,
-): Promise<void> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 90_000)
-  // Also abort if caller cancels — store handler so we can remove it in finally
-  const abortHandler = () => controller.abort()
-  signal?.addEventListener('abort', abortHandler)
-
-  const res = await fetch(`${BASE}/api/query`, {
+): Promise<StructuredResult> {
+  const res = await fetch(`${BASE}/api/structured/stream`, {
     method: 'POST',
     headers: headers(apiKey),
-    body: JSON.stringify({ query, model, wikiContext }),
-    signal: controller.signal,
+    body: JSON.stringify({ query, model }),
+    signal,
   })
-
   if (!res.ok || !res.body) {
-    clearTimeout(timeout)
-    signal?.removeEventListener('abort', abortHandler)
-    const err = await res.json().catch(() => ({ error: 'Unknown error' })) as { error: string }
-    throw new Error(err.error ?? 'Failed to stream locations')
+    const err = (await res.json().catch(() => ({ error: 'Structured query failed' }))) as { error: string }
+    throw new Error(err.error ?? 'Structured query failed')
   }
-
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
-  let buffer = ''
+  let buf = ''
+  let result: StructuredResult | null = null
 
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      buffer = lines.pop() ?? ''
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue
-        try {
-          const event = JSON.parse(line.slice(6)) as {
-            type: string
-            data?: Location
-            mode?: 'grounded' | 'memory'
-            dropped?: number
-            wikiSource?: string | null
-            message?: string
-          }
-          if (event.type === 'location' && event.data) {
-            onLocation(event.data)
-          } else if (event.type === 'done') {
-            onDone({
-              mode: event.mode ?? 'memory',
-              dropped: event.dropped ?? 0,
-              wikiSource: event.wikiSource ?? undefined,
-            })
-          } else if (event.type === 'error') {
-            onError(event.message ?? 'Unknown error')
-          }
-        } catch {
-          // malformed SSE line — skip
-        }
-      }
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buf += decoder.decode(value, { stream: true })
+    let nl: number
+    while ((nl = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, nl).trim()
+      buf = buf.slice(nl + 1)
+      if (!line) continue
+      const evt = JSON.parse(line) as
+        | { type: 'progress'; message: string }
+        | { type: 'result'; nodes: StructuredResult['nodes']; unresolved: StructuredResult['unresolved']; meta: StructuredResult['meta'] }
+        | { type: 'error'; error: string }
+      if (evt.type === 'progress') onProgress(evt.message)
+      else if (evt.type === 'error') throw new Error(evt.error)
+      else if (evt.type === 'result') result = { nodes: evt.nodes, unresolved: evt.unresolved, meta: evt.meta }
     }
-  } finally {
-    clearTimeout(timeout)
-    signal?.removeEventListener('abort', abortHandler)
-    reader.cancel().catch(() => {})
   }
+  if (!result) throw new Error('Stream ended without a result')
+  return result
 }
 
 export async function fetchAnalysis(
