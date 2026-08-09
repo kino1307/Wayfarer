@@ -81,7 +81,12 @@ tools, never guess a P/Q id you can look up, never submit an untested query.
 VARIABLE CONTRACT — bind these exact names and your SELECT must LIST them (labels come from the
 label service but are only returned if selected, else pins show raw QIDs):
   SELECT DISTINCT ?where ?whereLabel ?coord ?whereArticle ?why ?whyLabel ?whyArticle
-- ?where  the place to plot (city/town/venue/building/site) — always an entity, never a coord literal
+- ?where  the place to plot (city/town/venue/building/site) — always an entity, never a coord literal.
+          NEVER \`BIND(wd:Qxxx AS ?where)\` to hand-pick a single entity from your own judgement (e.g.
+          a subjective/pop-culture "capital of X" with no real Wikidata property behind it) — that has
+          ZERO Wikidata evidence and is a guess wearing SPARQL syntax. If no real property/class links
+          the request to a place, let the query return 0 rows rather than fabricate one; the app then
+          falls back to honestly-labelled model knowledge, which is the correct outcome, not a failure.
 - ?coord  OPTIONAL { ?where wdt:P625 ?coord }
 - ?whereArticle  OPTIONAL { ?whereArticle schema:about ?where ; schema:isPartOf <https://en.wikipedia.org/> }
 - ?why    the entity that makes ?where relevant (the country a capital belongs to; the member whose

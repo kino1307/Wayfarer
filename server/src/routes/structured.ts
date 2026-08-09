@@ -440,6 +440,32 @@ async function runStructuredPipeline(
       }
     }
 
+    // Structural-evasion guard (PID R9/R10 hardening, not a content/topic branch — R7-safe: it
+    // detects a SPARQL SHAPE, not a query subject). A `?where` derived solely by `BIND(wd:Qxxx AS
+    // ?where)` carries ZERO Wikidata evidence — it's the model hand-picking an answer from its own
+    // judgement and dressing it as a structured query. Because the picked entity is real (a genuine
+    // settlement with a genuine coordinate) and there's exactly one row, type-conformance and
+    // cardinality both trivially "pass" — the exact "confident garbage" R10 exists to catch, just
+    // via a shape neither check can see. (Found live: "rizz capital of the world" → NYC, BIND'd by
+    // fiat, sailed through fully `verified` with no asserted flag anywhere.) Detected here rather
+    // than relying solely on the builder-prompt instruction against it, since LLM compliance with a
+    // negative instruction is never guaranteed — this guarantees the demotion regardless.
+    if (/\bBIND\s*\(\s*wd:Q\d+\s+AS\s+\?where\s*\)/i.test(finalSparql)) {
+      const reason = 'membership asserted: ?where was fixed by BIND, not derived from any Wikidata property/class relationship — no structural evidence backs this claim'
+      const seen = new Set<string>()
+      let freshlyDemoted = 0
+      for (const b of chosenBindings) {
+        const wUri = b.where?.value
+        if (wUri && !seen.has(wUri)) {
+          seen.add(wUri)
+          if (!demote.has(wUri)) { demote.set(wUri, reason); freshlyDemoted++ }
+        }
+      }
+      if (freshlyDemoted) {
+        report = { ...report, demoted: report.demoted + freshlyDemoted, notes: [...report.notes, `${freshlyDemoted} result(s) demoted: ?where bound by fiat (BIND), not a real Wikidata relationship`] }
+      }
+    }
+
     onProgress('Locating places…')
     // Location ladder (structural → geocode → context-model) + envelope guard (PID R4) — the same
     // stage the asserted path uses, so every pin in Orbis is grounded the same way.

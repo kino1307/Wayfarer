@@ -777,3 +777,41 @@ fallback}.ts`, with the legacy §6 machinery deleted.
   type/self-check clean, and the observed behaviour (graceful degradation, no crash, no hang) is
   consistent with them working — but this is inference from absence of failure, not a direct trigger, in
   keeping with the same honesty standard applied to the `report.demoted` fix above.
+
+- **Adversarial "bored Gen Z kid" round surfaced a real R10 evasion: `BIND`-by-fiat sails through fully
+  `verified`.** Ten deliberately hard queries — slang, memes, and half-nonsense with no clean referent
+  ("skibidi toilet locations", "gyatt canyon", "sigma city real or nah", etc.) — chosen to test honesty
+  under garbage input, not cost/perf. Most generalised well and are worth recording as evidence the
+  contract holds: "haunted places fr fr" correctly matched Wikidata's real `haunted place` class (slang →
+  real referent, no special-casing needed); "biggest ohio moments" and "delulu is the solulu but where"
+  both got demoted to `asserted` by the existing type-conformance/cardinality checks exactly as designed;
+  "npc cafes near a mall" gracefully discarded the un-mappable "npc" qualifier and only structured the
+  parts with real Wikidata backing (cafés near malls) rather than fabricating a property for it.
+  One real bug: **"rizz capital of the world"** — no Wikidata property could possibly express this, so
+  the builder's own reasoning trace says outright *"Wikidata won't have this concept... let me just plot
+  NYC as the rizz capital"* and emitted `BIND(wd:Q60 AS ?where) # NYC — widely cited origin of 'rizz'
+  slang`. Because the picked entity is a real settlement with a real coordinate and there is exactly one
+  row, R10's type-conformance and cardinality checks both trivially "pass" — the result displayed fully
+  `verified`, zero `asserted` flag anywhere (`why: []`, no demotion, no notes). This is the exact
+  "confident garbage" R10 exists to catch, arriving via a SPARQL shape neither of its checks can see: a
+  `BIND` to a literal QID carries no Wikidata evidence at all, it is the model's own judgement dressed as
+  a structured query result. Not query-specific — any subjective "capital/best/most X" framing with no
+  real property behind it can trigger the same evasion. Two-layer fix, matching the session's established
+  pattern (prompt fix for root cause + structural guard as a reliability backstop, since LLM compliance
+  with a negative instruction is never guaranteed):
+  1. `lib/builder.ts` system prompt: the `?where` contract now explicitly forbids `BIND(wd:Qxxx AS
+     ?where)` to hand-pick an entity, and tells the agent that returning 0 rows when no real property
+     links the request to a place is the CORRECT outcome (falls through to the existing, honestly-labelled
+     asserted path), not a failure to avoid.
+  2. `routes/structured.ts`: a regex guard (`/\bBIND\s*\(\s*wd:Q\d+\s+AS\s+\?where\s*\)/i`) detects the
+     shape directly on the final SPARQL and force-demotes every affected row into the same `demote` Map
+     the over-collection fix already uses — reusing the existing per-node demotion loop rather than adding
+     new machinery. Capability/shape-based, not content-based (R7-safe): it fires on ANY query whose
+     `?where` is fixed by BIND, regardless of what the query is about.
+  Live re-run after restart: the prompt fix alone was sufficient this time — the builder wrote
+  `FILTER(false)` with an explicit comment ("no Wikidata property... falls back to labelled model
+  knowledge") instead of a bare BIND, correctly returning 0 structured rows. The asserted fallback then
+  produced 5 candidate cities, all honestly `geocoded`/`asserted` — exactly the R6/R8-compliant output the
+  original bug denied the user. Honest caveat: this run validates the PROMPT layer; it did not exercise
+  the structural regex backstop (no bare BIND was produced to catch), so that guard's correctness rests on
+  code review + type/self-check, not a live trigger — same caveat class as the two robustness fixes above.
