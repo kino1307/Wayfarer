@@ -5,9 +5,10 @@ services:
       - "3013:3013" # published for direct API access/debugging; the client reaches it via nginx
     environment:
       PORT: 3013
-      # Docker-specific default (not read from the root .env, which is tuned for local dev at
-      # :5173) — override here if you're publishing this somewhere other than localhost:8080.
-      ALLOWED_ORIGINS: http://localhost:8080
+      # Compose auto-loads a .env next to this file for ${...} substitution. Default assumes
+      # local (docker compose up on localhost:8080); a deploy's own .env overrides this to its
+      # real public origin (e.g. https://wayfarer.wjleece.dev) without editing this committed file.
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3013/api/health"]

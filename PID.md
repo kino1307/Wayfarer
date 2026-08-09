@@ -873,3 +873,30 @@ fallback}.ts`, with the legacy §6 machinery deleted.
   clean `vite build`, dev servers restarted fresh, and a live re-run of the canonical "South American
   capitals" query returned the expected 13/13 `verified` nodes — confirming the rename and dependency
   bumps didn't regress the pipeline itself.
+
+- **Deployed live: https://wayfarer.wjleece.dev.** GitHub repo renamed `kino1307/Orbis` →
+  `kino1307/wayfarer` (`gh repo rename`, local remote updated); local folder renamed
+  `Desktop\orbis` → `Desktop\wayfarer` (blocked once by a stale PowerShell-tool cwd still sitting
+  inside the old folder — Windows locks a directory's rename against any process using it as CWD,
+  not just open file handles; unstuck by `cd`-ing that shell out first). Also found and cleaned up
+  ~26 zombie `npm run dev`/`tsx watch` processes accumulated from this session's many manual
+  restart cycles — Windows `taskkill //F` on the actively-listening PID doesn't reliably clean up
+  every process in a `tsx watch` restart the way expected; only the port-holder died, the rest went
+  stale-but-resident. Vite (client) never leaked this way, only the server's `tsx watch` side did.
+  `docker-compose.yml`'s `ALLOWED_ORIGINS` changed from a hardcoded `localhost:8080` to
+  `${ALLOWED_ORIGINS:-http://localhost:8080}` so a deploy's own `.env` can override it without
+  touching the committed file.
+  Deployed to the existing media VPS (`188.245.59.175`, the box already serving `media`/`requests`/
+  `portal`.wjleece.dev via Caddy) — deliberately NOT the separate OpenClaw "claw" box, per the
+  existing architecture decision to keep them isolated. Shipped via `git archive HEAD | ssh ... tar
+  -x` into `/opt/wayfarer` (exactly the committed tree, no rsync available, no need to touch
+  `node_modules`/`dist`/`.git`), a VPS-local `.env` sets the real `ALLOWED_ORIGINS`, `docker compose
+  up -d --build` — both images built and both containers came up healthy on the first attempt.
+  Caddy got a new site block (`wayfarer.wjleece.dev { reverse_proxy 127.0.0.1:8080 }`, config
+  backed up first, `caddy validate` clean, reloaded without dropping the existing three sites).
+  Verified the deployed containers with a real end-to-end query hitting the VPS directly (bypassing
+  DNS): "South American capitals" → 13 nodes, `structured`, `verified` — the deployed build behaves
+  identically to local dev. **Still pending, not something I can do myself:** the Cloudflare DNS `A`
+  record (`wayfarer` → `188.245.59.175`, DNS-only) — I don't hold Cloudflare credentials in this
+  environment. Caddy's config is already live and will auto-issue the Let's Encrypt cert the moment
+  DNS resolves; no further action needed here once that record is added.
