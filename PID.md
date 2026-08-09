@@ -738,3 +738,42 @@ fallback}.ts`, with the legacy §6 machinery deleted.
   only the summary count lagged), but real, and only surfaced because the same query was run twice with
   different LLM outcomes — a reminder that a single validation run proves the mechanism works, not that
   every path through it reports itself correctly.
+
+- **Demographic-realistic test round surfaced a crash and a wasted-spend transport failure.** Ten
+  queries chosen to look like actual varied users (a kid: "Where can I see dinosaur bones", a casual
+  tourist: "cool castles to visit", a retiree, a hobbyist, deliberately rough grammar, etc.) rather than
+  edge-case stress tests. Two real, generic robustness gaps, both against the pipeline's transport/scale
+  handling, not any query's content:
+  1. **Malformed WDQS response body crashed the whole request.** "Where can I see dinosaur bones" hit
+     `SyntaxError: Unterminated string in JSON` from inside `res.json()` in `lib/wikidata.ts` — WDQS
+     returned HTTP 200 with a truncated/malformed body (a known Blazegraph failure mode under load).
+     `runSparql`'s retry loop only recognised non-2xx statuses (`RETRYABLE_STATUS` = 429/503) as
+     transient; a malformed *200* fell straight through as an uncaught exception and surfaced as a raw
+     500 with a useless message. Fixed: wrap the `res.json()` parse in its own try/catch; on failure,
+     treat it exactly like a 503 (record WDQS trouble, backoff, retry within the existing attempt/time
+     budget), and only after retries are exhausted throw a proper `SparqlError(502, …)` so the caller's
+     existing graceful-degradation path handles it like any other WDQS failure (PID R6 — loud, never an
+     uncaught crash). Generic: applies to every `runSparql` call, not this query.
+  2. **Extreme over-collection can burn spend and never deliver a result.** "cool castles to visit" gives
+     the builder nothing to constrain on, so it correctly matched ~14,500 raw rows. The pipeline dutifully
+     verified, geocoded, and demoted all of them (correctly — the earlier over-collection fix worked) but
+     took 305s and the resulting JSON payload was large/slow enough that the client's connection died
+     before the response ever arrived (undici's default 300s body timeout) — full LLM spend (~$0.08),
+     zero delivered value. Fixed: a flat sanity ceiling (`MAX_STRUCTURED_ROWS = 3000`) in
+     `routes/structured.ts`, checked right after rollup + off-Earth filtering and before the expensive
+     verify/geocode/hydrate stage. Above it, the raw structured rows are discarded and the query is
+     routed into the SAME bounded, curated model-knowledge (`asserted`) path already used for zero
+     structured rows — reusing existing, already-R6-compliant degradation rather than inventing new
+     behaviour, and setting `meta.error` so the "why did this look different" reason is visible, not
+     silent. 3000 is a flat, untuned ceiling (`ponytail:` marked in code) — raise it only if a genuinely
+     correct result set is ever observed landing above it; a result this large is unusable as individual
+     map pins regardless of correctness.
+  Both type-checked and passed `lib/checks.ts`. Live re-run of both queries after restart: neither
+  crashed nor hung (dinosaur bones: clean asserted-fallback in 107s; castles: clean asserted-fallback in
+  148s, safely under the transport ceiling). Honest caveat: neither retest happened to reproduce the
+  EXACT original failure — WDQS non-determinism meant dinosaur bones hit a genuine 502 this time (an
+  already-handled path, not the new malformed-JSON branch) and castles hit a 408 timeout before
+  accumulating enough rows to reach the new cap. The new code paths are simple, single-guard changes,
+  type/self-check clean, and the observed behaviour (graceful degradation, no crash, no hang) is
+  consistent with them working — but this is inference from absence of failure, not a direct trigger, in
+  keeping with the same honesty standard applied to the `report.demoted` fix above.

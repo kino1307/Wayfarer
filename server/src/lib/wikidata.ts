@@ -108,8 +108,25 @@ export async function runSparql(query: string, opts: SparqlOpts = {}): Promise<S
         signal: ctrl.signal,
       })
       if (res.ok) {
-        const data = (await res.json()) as { results?: { bindings?: SparqlBinding[] } }
-        return data.results?.bindings ?? []
+        try {
+          const data = (await res.json()) as { results?: { bindings?: SparqlBinding[] } }
+          return data.results?.bindings ?? []
+        } catch (parseErr) {
+          // WDQS occasionally returns a 200 with a truncated/malformed body under load (a
+          // Blazegraph failure mode, not ours) — treat it exactly like a 503: transient, worth a
+          // backoff+retry within budget, never an uncaught crash (PID R6, loud only after
+          // genuinely giving up).
+          recordWdqsTrouble()
+          if (attempt < MAX_ATTEMPTS - 1) {
+            const backoff = Math.min(500 * 2 ** attempt, 4000)
+            if (Date.now() + backoff < deadline) {
+              console.warn(`[wdqs] malformed JSON body — backing off ${backoff}ms (attempt ${attempt + 1}/${MAX_ATTEMPTS})`)
+              await delay(backoff, ctrl.signal)
+              continue
+            }
+          }
+          throw new SparqlError(502, `malformed response body: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`)
+        }
       }
       const body = await res.text().catch(() => '')
       if (RETRYABLE_STATUS.has(res.status)) recordWdqsTrouble() // health signal (per throttle response)
