@@ -43,7 +43,9 @@ with weak matches.
 Query: "${query}"
 
 For each place return its name, the country it is in, and a one-line description of why it matches
-the query. Do NOT return coordinates — only the name and context.
+the query. Do NOT return coordinates — only the name and context. Ground each description in a
+specific, checkable fact — a named event, institution, statistic, or notable person — never a
+sweeping generalization about a nationality, ethnicity, or culture's traits.
 
 Return ONLY raw JSON — an array of objects:
 [{"name":"...","country":"...","description":"..."}]

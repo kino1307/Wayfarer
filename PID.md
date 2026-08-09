@@ -815,3 +815,19 @@ fallback}.ts`, with the legacy §6 machinery deleted.
   original bug denied the user. Honest caveat: this run validates the PROMPT layer; it did not exercise
   the structural regex backstop (no bare BIND was produced to catch), so that guard's correctness rests on
   code review + type/self-check, not a live trigger — same caveat class as the two robustness fixes above.
+
+- **Model-enumeration "why" text had no guardrail against demographic generalization.** Inspecting the
+  `rizz capital of the world` asserted-path output (above) surfaced a content-quality issue distinct from
+  the pipeline bug: candidate justifications leaned on sweeping ethnic/national generalizations presented
+  as fact ("Nigerian street culture... most naturally charming", "British... Roadman and drill scene...
+  crediting UK youth culture"). Root cause: `lib/enumerate.ts`'s `modelEnumerate` prompt asks for "a
+  one-line description of why it matches" with zero constraint on what kind of reasoning is acceptable —
+  this is the ONE place in the pipeline where free-text `why` justification is model-generated rather than
+  sourced from a real Wikidata label (the structured path's `?why` always comes from Wikidata; only the
+  asserted/model-knowledge fallback free-associates). Generic to any subjective query, not "rizz"-specific.
+  Fixed with one line in the prompt: ground each description in a specific, checkable fact (a named event,
+  institution, statistic, or person) and explicitly forbid generalizing about a nationality/ethnicity/
+  culture's traits. Live re-run confirmed the change: the same query now returns reasoning grounded in
+  named specifics (Kai Cenat coining the term, Oxford's 2023 Word of the Year, Tom Holland's viral Buzzfeed
+  interview, named creators) with no demographic generalization language. R7-safe (a uniform prompt
+  constraint applied to every asserted-path call, not a query-content branch).
