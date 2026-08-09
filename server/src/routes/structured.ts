@@ -468,7 +468,7 @@ async function runStructuredPipeline(
 
     onProgress('Locating places…')
     // Location ladder (structural → geocode → context-model) + envelope guard (PID R4) — the same
-    // stage the asserted path uses, so every pin in Orbis is grounded the same way.
+    // stage the asserted path uses, so every pin in Wayfarer is grounded the same way.
     const { located, pending } = bindingsToNodes(chosenBindings, query_role)
     const r = await locateAndGuard(located, pending, query, apiKey, model)
     nodes = r.nodes

@@ -1,4 +1,4 @@
-Build Orbis to satisfy its contract in C:\Users\james\Desktop\orbis\PID.md.
+Build Wayfarer to satisfy its contract in C:\Users\james\Desktop\orbis\PID.md.
 
 OBJECTIVE
 Turn the app into: user query -> verified list of nodes plotted on the map,

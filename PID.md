@@ -1,12 +1,12 @@
-# Orbis: Product & Implementation Definition (PID)
+# Wayfarer: Product & Implementation Definition (PID)
 
 > The contract. Every change is checked against this document. If a proposed change
 > needs a rule below to be weakened, the change is wrong until this document is amended
 > first, not the other way around.
 
-## 1. What Orbis is
+## 1. What Wayfarer is
 
-At its simplest, Orbis is an app that:
+At its simplest, Wayfarer is an app that:
 
 1. accepts a user **query**,
 2. **processes** it, and
@@ -570,7 +570,7 @@ fallback}.ts`, with the legacy §6 machinery deleted.
   do NOT drop a constraint", the lower-risk lever for the deep-query case, since it pushes efficient
   reformulation rather than recall-losing abandonment. **Conclusion:** the many-LLM-calls tail on
   genuinely-hard/ambiguous queries is largely INHERENT to the ReAct loop; forcing it shorter trades the
-  accuracy that is Orbis's whole point. The right product answers are the streaming-progress UI (built,
+  accuracy that is Wayfarer's whole point. The right product answers are the streaming-progress UI (built,
   `/stream`) to keep the wait responsive plus the result cache for repeats, NOT a step cap. Concurrency
   also inflates wall time (3 parallel → 64-234s) via shared-endpoint contention (WDQS/Anthropic/Nominatim),
   a scaling concern for the Redis result-cache + a WDQS concurrency limiter, not per-query latency.
@@ -831,3 +831,45 @@ fallback}.ts`, with the legacy §6 machinery deleted.
   named specifics (Kai Cenat coining the term, Oxford's 2023 Word of the Year, Tom Holland's viral Buzzfeed
   interview, named creators) with no demographic generalization language. R7-safe (a uniform prompt
   constraint applied to every asserted-path call, not a query-content branch).
+
+- **Renamed Orbis → Wayfarer; production-readiness pass.** "Orbis" wasn't landing with the user
+  ("still not really sold on the name"). Chosen after spot-checking four smoother candidates
+  (Sextant, Verity, Locus, Waymark) that all turned out to have real 2026 SaaS-product collisions —
+  Wayfarer had none found. Full sweep: PID.md, README.md, `orbis-goal.txt` → `wayfarer-goal.txt`,
+  all three `package.json` names, `index.html` title, `App.tsx` localStorage keys (`orbis_*` →
+  `wayfarer_*`, a one-time local settings reset, no user-facing data at stake), the two WDQS/
+  Nominatim `User-Agent` strings, the DisclaimerModal copy, and the `structured.ts`/`index.ts`
+  comments and console lines.
+  Alongside the rename, addressed real gaps found while touching this surface, since "get it
+  production ready" was the explicit ask:
+  - **README was describing the OLD architecture** (Wikipedia-scraping, pre-rewrite) — rewritten to
+    describe the actual current R1-R10 structured/verified pipeline, plus setup and Docker sections.
+  - **`.env.example` was actively misleading**: it listed `ANTHROPIC_API_KEY`, which the server has
+    never read (pure BYOK via the `x-api-key` header — confirmed by grepping `process.env` usage),
+    and omitted the two real vars (`ALLOWED_ORIGINS`, `GEMINI_API_KEY`) — corrected.
+  - **Dockerized both services**: `server/Dockerfile` (multi-stage tsc build → slim Node runtime,
+    `node dist/index.js`), `client/Dockerfile` (vite build → nginx), with `client/nginx.conf`
+    reverse-proxying `/api/` to the server container — same relative-path, same-origin approach the
+    Vite dev proxy already uses, so the client needs no baked-in API base URL. `proxy_buffering off`
+    + a 320s timeout on the proxy, since `/api/structured/stream` is long-lived NDJSON and queries
+    routinely run past a default proxy timeout. `docker-compose.yml` wires both together
+    (`docker compose up --build`, client on :8080). **Not independently verified** — Docker isn't
+    installed on this machine, so the images have never actually been built or run. Everything the
+    Dockerfiles depend on WAS verified directly: `npm run build` in both `server/` and `client/`
+    (the exact commands the Dockerfiles run) succeed cleanly, and `dotenv.config()` on a missing
+    `.env` path (the container's reality) is a documented no-op, so container-injected env vars work
+    unmodified. The container-specific pieces (image build, inter-container networking, the nginx
+    config syntax) are reasoned-through but unverified — flagging this honestly rather than claiming
+    tested, consistent with this log's standing rule (verify against the real thing, not just
+    reasoning) wherever actually possible.
+  - **Dependency audit**: `npm audit fix` (non-breaking only) applied at root/server/client, clearing
+    a critical `shell-quote` issue (root, via the dev-only `concurrently`), and server's `body-parser`/
+    `form-data`/`qs` findings entirely. Left one `esbuild`-via-Vite finding in server and client
+    unfixed — the only available fix forces a Vite 5→8 major bump, and the exposure itself is
+    dev-server-only (arbitrary file read/request-forwarding when running `vite`'s OWN dev server,
+    not present in the built static output nginx actually serves) — not worth a breaking upgrade for
+    a risk the production path doesn't carry.
+  Re-verified end-to-end after all of this: `tsc --noEmit` and `checks.ts` clean on the server, a
+  clean `vite build`, dev servers restarted fresh, and a live re-run of the canonical "South American
+  capitals" query returned the expected 13/13 `verified` nodes — confirming the rename and dependency
+  bumps didn't regress the pipeline itself.

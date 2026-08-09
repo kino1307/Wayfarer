@@ -14,17 +14,17 @@ import { nodeTrust, type ModelId } from './types'
 const TIER_LABEL: Record<string, string> = { verified: 'Verified', geocoded: 'Geocoded', unverified: 'Unverified' }
 
 function getInitialDark(): boolean {
-  const stored = localStorage.getItem('orbis_dark')
+  const stored = localStorage.getItem('wayfarer_dark')
   return stored === 'true'
 }
 
 export default function App() {
   // BYOK only: the key lives in the user's browser (localStorage), never embedded in the build.
   const [apiKey, setApiKey] = useState<string>(
-    () => localStorage.getItem('orbis_api_key') ?? ''
+    () => localStorage.getItem('wayfarer_api_key') ?? ''
   )
   const [model, setModel] = useState<ModelId>(
-    () => (localStorage.getItem('orbis_model') as ModelId) ?? 'claude-sonnet-4-6'
+    () => (localStorage.getItem('wayfarer_model') as ModelId) ?? 'claude-sonnet-4-6'
   )
   const [isDark, setIsDark] = useState<boolean>(getInitialDark)
   const [searchValue, setSearchValue] = useState('')
@@ -32,18 +32,18 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark)
-    localStorage.setItem('orbis_dark', String(isDark))
+    localStorage.setItem('wayfarer_dark', String(isDark))
   }, [isDark])
 
   function handleApiKeyChange(key: string) {
     setApiKey(key)
-    if (key) localStorage.setItem('orbis_api_key', key)
-    else localStorage.removeItem('orbis_api_key')
+    if (key) localStorage.setItem('wayfarer_api_key', key)
+    else localStorage.removeItem('wayfarer_api_key')
   }
 
   function handleModelChange(m: ModelId) {
     setModel(m)
-    localStorage.setItem('orbis_model', m)
+    localStorage.setItem('wayfarer_model', m)
   }
 
   const { history: _history, chips, chipsLoading, addToHistory, refreshChips } = useHistory(model, apiKey)

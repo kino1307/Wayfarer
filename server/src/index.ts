@@ -53,6 +53,6 @@ app.get('/api/health', (_req, res) => {
 })
 
 app.listen(PORT, () => {
-  console.log(`Orbis API:    http://localhost:${PORT}`)
-  console.log(`Orbis app:    http://localhost:5173`)
+  console.log(`Wayfarer API: http://localhost:${PORT}`)
+  console.log(`Wayfarer app: http://localhost:5173`)
 })

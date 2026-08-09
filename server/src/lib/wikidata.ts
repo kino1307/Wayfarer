@@ -6,7 +6,7 @@
 const WDQS = 'https://query.wikidata.org/sparql'
 
 // WDQS requires a descriptive User-Agent or it returns 403.
-const USER_AGENT = 'Orbis/0.1 (geographic query tool; structured node mapper)'
+const USER_AGENT = 'Wayfarer/0.1 (geographic query tool; structured node mapper)'
 
 export type SparqlValue = { type: string; value: string; 'xml:lang'?: string }
 export type SparqlBinding = Record<string, SparqlValue | undefined>

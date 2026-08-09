@@ -49,7 +49,7 @@ export function DisclaimerModal({ onDismiss }: Props) {
             color: 'var(--ink)',
             margin: '6px 0 0',
           }}>
-            How Orbis maps your query
+            How Wayfarer maps your query
           </h2>
         </div>
 
@@ -63,12 +63,12 @@ export function DisclaimerModal({ onDismiss }: Props) {
           gap: 12,
         }}>
           <p style={{ margin: 0 }}>
-            Orbis uses Claude to translate your query into a <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>Wikidata</strong> query — a
+            Wayfarer uses Claude to translate your query into a <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>Wikidata</strong> query — a
             structured, community-maintained knowledge base — then plots what Wikidata returns.
             For well-modelled topics (capitals, members of a group, battles) the results are precise and grounded.
           </p>
           <p style={{ margin: 0 }}>
-            When Wikidata has no data for a query (subjective or very recent topics), Orbis falls
+            When Wikidata has no data for a query (subjective or very recent topics), Wayfarer falls
             back to <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>the model's own knowledge</strong>. The model can sound confident while being
             completely wrong — inventing places or members that do not exist. Those results are flagged.
           </p>

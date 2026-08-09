@@ -14,7 +14,7 @@ function uriToQid(uri: string | null): string | null {
 }
 
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search'
-const UA = 'Orbis/0.1 (geographic query tool)'
+const UA = 'Wayfarer/0.1 (geographic query tool)'
 
 // Nominatim asks for <= 1 request/second. We geocode sequentially with spacing, bounded
 // by a budget so the fallback stays interactive; entities beyond the budget fall through

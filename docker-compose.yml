@@ -1,0 +1,24 @@
+services:
+  server:
+    build: ./server
+    ports:
+      - "3013:3013" # published for direct API access/debugging; the client reaches it via nginx
+    environment:
+      PORT: 3013
+      # Docker-specific default (not read from the root .env, which is tuned for local dev at
+      # :5173) — override here if you're publishing this somewhere other than localhost:8080.
+      ALLOWED_ORIGINS: http://localhost:8080
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3013/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  client:
+    build: ./client
+    ports:
+      - "8080:80"
+    depends_on:
+      server:
+        condition: service_healthy
