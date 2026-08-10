@@ -23,7 +23,7 @@ export function ChipsRow({ chips, loading, onChipClick, onRefresh }: Props) {
     >
       <span
         style={{
-          fontFamily: "'DM Mono', monospace",
+          fontFamily: "Helvetica, Arial, sans-serif",
           fontSize: 11,
           color: 'var(--ink-faint)',
           flexShrink: 0,
@@ -71,7 +71,7 @@ export function ChipsRow({ chips, loading, onChipClick, onRefresh }: Props) {
       {loading ? (
         <span
           style={{
-            fontFamily: "'DM Mono', monospace",
+            fontFamily: "Helvetica, Arial, sans-serif",
             fontSize: 11,
             color: 'var(--ink-faint)',
             fontStyle: 'italic',
@@ -90,7 +90,7 @@ export function ChipsRow({ chips, loading, onChipClick, onRefresh }: Props) {
               borderRadius: 99,
               background: 'var(--surface-raised)',
               fontSize: 12,
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "Helvetica, Arial, sans-serif",
               color: 'var(--ink-muted)',
               cursor: 'pointer',
               whiteSpace: 'nowrap',

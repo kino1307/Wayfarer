@@ -52,7 +52,7 @@ export function ResultItem({ location, selected, onClick }: Props) {
           <span
             style={{
               marginLeft: 6,
-              fontFamily: "'DM Mono', monospace",
+              fontFamily: "Helvetica, Arial, sans-serif",
               fontSize: 9,
               fontWeight: 400,
               color: '#9a6a1a',
@@ -71,7 +71,7 @@ export function ResultItem({ location, selected, onClick }: Props) {
       {meta && (
         <div
           style={{
-            fontFamily: "'DM Mono', monospace",
+            fontFamily: "Helvetica, Arial, sans-serif",
             fontSize: 10,
             color: 'var(--ink-faint)',
             marginBottom: 4,

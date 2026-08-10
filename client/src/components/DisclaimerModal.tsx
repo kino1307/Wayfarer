@@ -34,7 +34,7 @@ export function DisclaimerModal({ onDismiss }: Props) {
       >
         <div style={{ marginBottom: 20 }}>
           <span style={{
-            fontFamily: "'DM Mono', monospace",
+            fontFamily: "Helvetica, Arial, sans-serif",
             fontSize: 10,
             letterSpacing: '0.1em',
             color: 'var(--ink-faint)',
@@ -43,7 +43,7 @@ export function DisclaimerModal({ onDismiss }: Props) {
             Heads up
           </span>
           <h2 style={{
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: "Helvetica, Arial, sans-serif",
             fontSize: 20,
             fontWeight: 600,
             color: 'var(--ink)',
@@ -54,7 +54,7 @@ export function DisclaimerModal({ onDismiss }: Props) {
         </div>
 
         <div style={{
-          fontFamily: "'DM Sans', sans-serif",
+          fontFamily: "Helvetica, Arial, sans-serif",
           fontSize: 14,
           lineHeight: 1.65,
           color: 'var(--ink-muted)',
@@ -103,7 +103,7 @@ export function DisclaimerModal({ onDismiss }: Props) {
             border: 'none',
             borderRadius: 8,
             fontSize: 14,
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: "Helvetica, Arial, sans-serif",
             fontWeight: 500,
             cursor: 'pointer',
             letterSpacing: '0.01em',

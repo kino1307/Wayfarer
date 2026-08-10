@@ -94,15 +94,15 @@ function PopupContent({ loc }: { loc: Location }) {
   // data-wiki is read by the popupopen handler to fetch and inject the lead image
   return `
     <div${loc.wiki_url ? ` data-wiki="${esc(loc.wiki_url)}"` : ''}>
-      <div style="padding:12px;font-family:'DM Sans',sans-serif;">
+      <div style="padding:12px;font-family:Helvetica,Arial,sans-serif;">
         <div style="font-weight:600;font-size:13px;color:var(--ink);margin-bottom:3px;line-height:1.3;">${esc(loc.name)}</div>
-        ${meta ? `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-faint);margin-bottom:6px;letter-spacing:0.02em;">${meta}</div>` : ''}
-        ${badge ? `<div style="display:inline-block;font-family:'DM Mono',monospace;font-size:9px;color:#9a6a1a;background:rgba(232,163,61,0.16);border:1px solid rgba(232,163,61,0.5);border-radius:4px;padding:2px 6px;margin-bottom:6px;letter-spacing:0.02em;">⚠ ${esc(badge)}</div>` : ''}
+        ${meta ? `<div style="font-family:Helvetica,Arial,sans-serif;font-size:10px;color:var(--ink-faint);margin-bottom:6px;letter-spacing:0.02em;">${meta}</div>` : ''}
+        ${badge ? `<div style="display:inline-block;font-family:Helvetica,Arial,sans-serif;font-size:9px;color:#9a6a1a;background:rgba(232,163,61,0.16);border:1px solid rgba(232,163,61,0.5);border-radius:4px;padding:2px 6px;margin-bottom:6px;letter-spacing:0.02em;">⚠ ${esc(badge)}</div>` : ''}
         <p style="font-size:12px;color:var(--ink-muted);line-height:1.55;margin-bottom:8px;">${esc(loc.description)}</p>
         ${loc.wiki_url
-          ? `<a href="${esc(loc.wiki_url)}" target="_blank" rel="noopener noreferrer" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);text-decoration:none;letter-spacing:0.02em;">Wikipedia →</a>`
+          ? `<a href="${esc(loc.wiki_url)}" target="_blank" rel="noopener noreferrer" style="font-family:Helvetica,Arial,sans-serif;font-size:10px;color:var(--accent);text-decoration:none;letter-spacing:0.02em;">Wikipedia →</a>`
           : unverified
-            ? `<span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-faint);letter-spacing:0.02em;">No source link</span>`
+            ? `<span style="font-family:Helvetica,Arial,sans-serif;font-size:10px;color:var(--ink-faint);letter-spacing:0.02em;">No source link</span>`
             : ''
         }
       </div>
@@ -385,10 +385,10 @@ function LoadingOverlay({ message }: { message: string }) {
           </circle>
         </svg>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500, color: 'var(--ink)' }}>
+          <span style={{ fontFamily: "Helvetica, Arial, sans-serif", fontSize: 14, fontWeight: 500, color: 'var(--ink)' }}>
             {message || 'Working…'}
           </span>
-          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: 'var(--ink-faint)', letterSpacing: '0.03em', marginTop: 3 }}>
+          <span style={{ fontFamily: "Helvetica, Arial, sans-serif", fontSize: 10, color: 'var(--ink-faint)', letterSpacing: '0.03em', marginTop: 3 }}>
             building a verified map — this can take a moment
           </span>
         </div>
@@ -425,7 +425,7 @@ function Legend() {
       {rows.map(r => (
         <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <span style={{ width: 10, height: 10, borderRadius: '50%', background: r.fill, border: r.border, flexShrink: 0 }} />
-          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: 'var(--ink-muted)', letterSpacing: '0.02em' }}>
+          <span style={{ fontFamily: "Helvetica, Arial, sans-serif", fontSize: 10, color: 'var(--ink-muted)', letterSpacing: '0.02em' }}>
             {r.label}
           </span>
         </div>

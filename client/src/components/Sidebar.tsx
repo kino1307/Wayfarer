@@ -3,6 +3,8 @@ import type { Location, Provider, QueryResult, StatusState } from '../types'
 import { ResultItem } from './ResultItem'
 import { InsightPanel } from './InsightPanel'
 import { StatusBar } from './StatusBar'
+import { IconSelect } from './IconSelect'
+import { ProviderIcon } from './ProviderIcon'
 
 const KEY_COPY: Record<Provider, { label: string; placeholder: string }> = {
   anthropic: { label: 'Anthropic', placeholder: 'sk-ant-…' },
@@ -75,30 +77,19 @@ export function Sidebar({
         }}
       >
         <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-          <select
+          <IconSelect
             value={panelProvider}
-            onChange={e => setPanelProvider(e.target.value as Provider)}
-            style={{
-              padding: '6px 8px',
-              border: '1px solid var(--border-strong)',
-              borderRadius: 6,
-              fontSize: 11,
-              fontFamily: "'DM Mono', monospace",
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-              background: 'var(--surface)',
-              color: 'var(--ink-muted)',
-              cursor: 'pointer',
-              outline: 'none',
-            }}
-          >
-            {(Object.keys(KEY_COPY) as Provider[]).map(p => (
-              <option key={p} value={p}>{KEY_COPY[p].label}</option>
-            ))}
-          </select>
+            onChange={setPanelProvider}
+            triggerStyle={{ padding: '6px 8px', fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase' }}
+            options={(Object.keys(KEY_COPY) as Provider[]).map(p => ({
+              value: p,
+              label: KEY_COPY[p].label,
+              icon: <ProviderIcon provider={p} />,
+            }))}
+          />
           <span
             style={{
-              fontFamily: "'DM Mono', monospace",
+              fontFamily: "Helvetica, Arial, sans-serif",
               fontSize: 10,
               color: hasPanelKey ? 'var(--accent)' : 'var(--ink-faint)',
               display: 'flex',
@@ -122,7 +113,7 @@ export function Sidebar({
                 border: '1px solid var(--border-strong)',
                 borderRadius: 6,
                 fontSize: 12,
-                fontFamily: "'DM Mono', monospace",
+                fontFamily: "Helvetica, Arial, sans-serif",
                 background: 'var(--surface)',
                 color: 'var(--ink)',
                 outline: 'none',
@@ -139,7 +130,7 @@ export function Sidebar({
                 fontSize: 12,
                 fontWeight: 500,
                 cursor: 'pointer',
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: "Helvetica, Arial, sans-serif",
               }}
             >
               Save
@@ -172,7 +163,7 @@ export function Sidebar({
           <div>
             <span
               style={{
-                fontFamily: "'DM Mono', monospace",
+                fontFamily: "Helvetica, Arial, sans-serif",
                 fontSize: 10,
                 color: 'var(--ink-faint)',
                 letterSpacing: '0.05em',
@@ -190,7 +181,7 @@ export function Sidebar({
               borderRadius: 6,
               background: analysingPattern ? 'var(--surface)' : 'var(--surface)',
               fontSize: 11,
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "Helvetica, Arial, sans-serif",
               color: analysingPattern ? 'var(--ink-faint)' : 'var(--ink-muted)',
               cursor: analysingPattern ? 'not-allowed' : 'pointer',
               whiteSpace: 'nowrap',
@@ -234,7 +225,7 @@ export function Sidebar({
             >
               <div
                 style={{
-                  fontFamily: "'DM Mono', monospace",
+                  fontFamily: "Helvetica, Arial, sans-serif",
                   fontSize: 10,
                   color: '#9a6a1a',
                   letterSpacing: '0.04em',
@@ -261,7 +252,7 @@ export function Sidebar({
             >
               <div
                 style={{
-                  fontFamily: "'DM Mono', monospace",
+                  fontFamily: "Helvetica, Arial, sans-serif",
                   fontSize: 10,
                   color: '#3f5bbf',
                   letterSpacing: '0.04em',
@@ -292,7 +283,7 @@ export function Sidebar({
             >
               <div
                 style={{
-                  fontFamily: "'DM Mono', monospace",
+                  fontFamily: "Helvetica, Arial, sans-serif",
                   fontSize: 10,
                   color: '#9a6a1a',
                   letterSpacing: '0.04em',

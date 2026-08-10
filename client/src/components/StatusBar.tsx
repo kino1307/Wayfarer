@@ -45,7 +45,7 @@ export function StatusBar({ status }: Props) {
       `}</style>
       <span
         style={{
-          fontFamily: "'DM Mono', monospace",
+          fontFamily: "Helvetica, Arial, sans-serif",
           fontSize: 11,
           color:
             status.phase === 'error'

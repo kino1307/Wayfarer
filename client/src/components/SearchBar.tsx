@@ -1,5 +1,7 @@
 import { type KeyboardEvent } from 'react'
-import { MODEL_OPTIONS, type ModelId } from '../types'
+import { MODEL_OPTIONS, providerFor, type ModelId } from '../types'
+import { IconSelect } from './IconSelect'
+import { ProviderIcon } from './ProviderIcon'
 
 interface Props {
   value: string
@@ -58,36 +60,25 @@ export function SearchBar({ value, onChange, onSearch, onCancel, loading, model,
               border: 'none',
               background: 'transparent',
               fontSize: 14,
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "Helvetica, Arial, sans-serif",
               color: 'var(--ink)',
               outline: 'none',
             }}
           />
         </div>
 
-        <select
+        <IconSelect
           value={model}
-          onChange={e => onModelChange(e.target.value as ModelId)}
+          onChange={onModelChange}
           disabled={loading}
-          style={{
-            padding: '9px 10px',
-            border: '1px solid var(--border-strong)',
-            borderRadius: 8,
-            background: 'var(--surface)',
-            fontSize: 13,
-            fontFamily: "'DM Sans', sans-serif",
-            color: 'var(--ink-muted)',
-            cursor: 'pointer',
-            outline: 'none',
-            flexShrink: 0,
-          }}
-        >
-          {MODEL_OPTIONS.map(opt => (
-            <option key={opt.id} value={opt.id}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+          align="right"
+          triggerStyle={{ padding: '9px 10px', fontSize: 13 }}
+          options={MODEL_OPTIONS.map(opt => ({
+            value: opt.id,
+            label: opt.label,
+            icon: <ProviderIcon provider={providerFor(opt.id)} />,
+          }))}
+        />
 
         {loading ? (
           <button
@@ -99,7 +90,7 @@ export function SearchBar({ value, onChange, onSearch, onCancel, loading, model,
               border: '1px solid var(--border-strong)',
               borderRadius: 8,
               fontSize: 14,
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "Helvetica, Arial, sans-serif",
               fontWeight: 500,
               cursor: 'pointer',
               flexShrink: 0,
@@ -128,7 +119,7 @@ export function SearchBar({ value, onChange, onSearch, onCancel, loading, model,
               border: 'none',
               borderRadius: 8,
               fontSize: 14,
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "Helvetica, Arial, sans-serif",
               fontWeight: 500,
               cursor: value.trim() ? 'pointer' : 'not-allowed',
               flexShrink: 0,
@@ -153,7 +144,7 @@ export function SearchBar({ value, onChange, onSearch, onCancel, loading, model,
       >
         <span
           style={{
-            fontFamily: "'DM Mono', monospace",
+            fontFamily: "Helvetica, Arial, sans-serif",
             fontSize: 10,
             color: 'var(--ink-faint)',
             letterSpacing: '0.03em',
@@ -164,7 +155,7 @@ export function SearchBar({ value, onChange, onSearch, onCancel, loading, model,
         <span style={{ color: 'var(--border-strong)', fontSize: 10 }}>·</span>
         <span
           style={{
-            fontFamily: "'DM Mono', monospace",
+            fontFamily: "Helvetica, Arial, sans-serif",
             fontSize: 10,
             color: 'var(--ink-faint)',
             letterSpacing: '0.03em',

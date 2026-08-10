@@ -36,7 +36,7 @@ export function InsightPanel({ insight, onDismiss }: Props) {
       </button>
       <div
         style={{
-          fontFamily: "'DM Mono', monospace",
+          fontFamily: "Helvetica, Arial, sans-serif",
           fontSize: 10,
           color: 'var(--accent)',
           letterSpacing: '0.08em',

@@ -30,7 +30,7 @@ export function Header({ isDark, onToggleDark }: Props) {
         </svg>
         <span
           style={{
-            fontFamily: "'Instrument Serif', serif",
+            fontFamily: "Helvetica, Arial, sans-serif",
             fontSize: 22,
             color: 'var(--ink)',
             letterSpacing: '-0.5px',
