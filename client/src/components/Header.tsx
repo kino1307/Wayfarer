@@ -18,7 +18,16 @@ export function Header({ isDark, onToggleDark }: Props) {
         zIndex: 10,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+          <path
+            d="M12 2C7.58 2 4 5.58 4 10c0 5.25 6.72 11.25 7.32 11.78a1 1 0 0 0 1.36 0C13.28 21.25 20 15.25 20 10c0-4.42-3.58-8-8-8z"
+            stroke="var(--accent)"
+            strokeWidth="1.6"
+            fill="none"
+          />
+          <path d="M12 6.5l1.4 3.1 3.1 1.4-3.1 1.4-1.4 3.1-1.4-3.1-3.1-1.4 3.1-1.4z" fill="var(--accent)" />
+        </svg>
         <span
           style={{
             fontFamily: "'Instrument Serif', serif",
