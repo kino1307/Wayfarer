@@ -27,7 +27,7 @@ export function Header({ isDark, onToggleDark }: Props) {
             letterSpacing: '-0.5px',
           }}
         >
-          Orb
+          Way
         </span>
         <span
           style={{
@@ -37,36 +37,11 @@ export function Header({ isDark, onToggleDark }: Props) {
             letterSpacing: '-0.5px',
           }}
         >
-          is
+          farer
         </span>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span
-          style={{
-            fontFamily: "'DM Mono', monospace",
-            fontSize: 10,
-            color: 'var(--accent-text)',
-            background: 'var(--accent-light)',
-            padding: '2px 8px',
-            borderRadius: 99,
-            border: '1px solid var(--border-strong)',
-            letterSpacing: '0.05em',
-            fontWeight: 500,
-          }}
-        >
-          100% Free
-        </span>
-        <span
-          style={{
-            fontFamily: "'DM Mono', monospace",
-            fontSize: 10,
-            color: 'var(--ink-faint)',
-            letterSpacing: '0.02em',
-          }}
-        >
-          Wikidata · OSM · Claude
-        </span>
         <button
           onClick={onToggleDark}
           title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
