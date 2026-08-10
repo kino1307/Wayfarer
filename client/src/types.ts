@@ -145,12 +145,13 @@ export function providerFor(model: string): Provider {
 // Sonnet is the default: benchmarked cheaper in aggregate than Haiku (converges in ~half the
 // builder steps, and prompt caching activates on it) AND higher quality. Haiku stays as the
 // budget option; Opus as the escalation for hard queries. See PID §8 / llm-provider-decision.
+// Ordered best to worst within each provider (strongest/most-capable first).
 export const MODEL_OPTIONS: { id: ModelId; label: string; maxTokens: number; approxNodes: number }[] = [
+  { id: 'claude-opus-4-8',           label: 'Opus · fastest on hard queries', maxTokens: 16000, approxNodes: 50 },
   { id: 'claude-sonnet-4-6',         label: 'Sonnet · recommended', maxTokens: 16000, approxNodes: 50 },
   { id: 'claude-haiku-4-5-20251001', label: 'Haiku · budget',       maxTokens:  8192, approxNodes: 50 },
-  { id: 'claude-opus-4-8',           label: 'Opus · fastest on hard queries', maxTokens: 16000, approxNodes: 50 },
-  { id: 'openai:gpt-5.6-terra',      label: 'GPT-5.6 Terra · balanced', maxTokens: 16000, approxNodes: 50 },
   { id: 'openai:gpt-5.6-sol',        label: 'GPT-5.6 Sol · frontier', maxTokens: 16000, approxNodes: 50 },
+  { id: 'openai:gpt-5.6-terra',      label: 'GPT-5.6 Terra · balanced', maxTokens: 16000, approxNodes: 50 },
   { id: 'openai:gpt-5.6-luna',       label: 'GPT-5.6 Luna · budget', maxTokens:  8192, approxNodes: 50 },
 ]
 

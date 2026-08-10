@@ -93,7 +93,7 @@ export function Sidebar({
               whiteSpace: 'nowrap',
             }}
           >
-            {hasKey ? '● key saved' : '○ no key yet'}
+            {hasKey ? 'key saved' : 'no key yet'}
           </span>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
