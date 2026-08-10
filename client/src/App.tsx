@@ -7,7 +7,7 @@ import { Sidebar } from './components/Sidebar'
 import { DisclaimerModal } from './components/DisclaimerModal'
 import { useQuery } from './hooks/useQuery'
 import { useHistory } from './hooks/useHistory'
-import { nodeTrust, providerFor, type ModelId, type Provider } from './types'
+import { nodeTrust, type ModelId, type Provider } from './types'
 
 // Filter pins by trust tier — the only per-node "type" axis that varies within one result
 // (query_role is uniform per query). Labels mirror nodeTrust().marker.
@@ -18,15 +18,24 @@ function getInitialDark(): boolean {
   return stored === 'true'
 }
 
-// One localStorage slot per provider — switching models (Claude <-> GPT) shouldn't blow away
-// a key you already entered for the other provider.
-const KEY_STORAGE = { anthropic: 'wayfarer_api_key', openai: 'wayfarer_api_key_openai' } as const
+// One localStorage slot per provider — switching providers shouldn't blow away a key or model
+// choice you already made for the other one.
+const KEY_STORAGE: Record<Provider, string> = { anthropic: 'wayfarer_api_key', openai: 'wayfarer_api_key_openai' }
+const MODEL_STORAGE: Record<Provider, string> = { anthropic: 'wayfarer_model_anthropic', openai: 'wayfarer_model_openai' }
+const DEFAULT_MODEL: Record<Provider, ModelId> = { anthropic: 'claude-sonnet-4-6', openai: 'openai:gpt-5.6-terra' }
 
 export default function App() {
-  const [model, setModel] = useState<ModelId>(
-    () => (localStorage.getItem('wayfarer_model') as ModelId) ?? 'claude-sonnet-4-6'
+  // Provider is the primary choice now — it decides which key is sent AND which models the
+  // SearchBar dropdown offers. Model is remembered per-provider, so flipping back to a provider
+  // you'd already picked a model for doesn't reset it to the default.
+  const [provider, setProvider] = useState<Provider>(
+    () => (localStorage.getItem('wayfarer_provider') as Provider) ?? 'anthropic'
   )
-  const provider = providerFor(model)
+  const [modelByProvider, setModelByProvider] = useState<Record<Provider, ModelId>>(() => ({
+    anthropic: (localStorage.getItem(MODEL_STORAGE.anthropic) as ModelId) ?? DEFAULT_MODEL.anthropic,
+    openai: (localStorage.getItem(MODEL_STORAGE.openai) as ModelId) ?? DEFAULT_MODEL.openai,
+  }))
+  const model = modelByProvider[provider]
   // BYOK only: keys live in the user's browser (localStorage), never embedded in the build.
   const [apiKeys, setApiKeys] = useState<Record<Provider, string>>(() => ({
     anthropic: localStorage.getItem(KEY_STORAGE.anthropic) ?? '',
@@ -49,9 +58,14 @@ export default function App() {
     else localStorage.removeItem(slot)
   }
 
+  function handleProviderChange(p: Provider) {
+    setProvider(p)
+    localStorage.setItem('wayfarer_provider', p)
+  }
+
   function handleModelChange(m: ModelId) {
-    setModel(m)
-    localStorage.setItem('wayfarer_model', m)
+    setModelByProvider(prev => ({ ...prev, [provider]: m }))
+    localStorage.setItem(MODEL_STORAGE[provider], m)
   }
 
   const { history: _history, chips, chipsLoading, addToHistory, refreshChips } = useHistory(model, apiKey)
@@ -119,6 +133,7 @@ export default function App() {
         loading={loading}
         model={model}
         onModelChange={handleModelChange}
+        provider={provider}
       />
       <ChipsRow chips={chips} loading={chipsLoading} onChipClick={handleChipClick} onRefresh={refreshChips} />
 
@@ -155,7 +170,8 @@ export default function App() {
           analysingPattern={analysingPattern}
           status={status}
           apiKeys={apiKeys}
-          activeProvider={provider}
+          provider={provider}
+          onProviderChange={handleProviderChange}
           onApiKeyChange={handleApiKeyChange}
         />
       </div>

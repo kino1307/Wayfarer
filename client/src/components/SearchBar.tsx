@@ -1,7 +1,7 @@
 import { type KeyboardEvent } from 'react'
-import { MODEL_OPTIONS, providerFor, type ModelId } from '../types'
+import { MODEL_OPTIONS, modelsForProvider, type ModelId, type Provider } from '../types'
 import { IconSelect } from './IconSelect'
-import { ProviderIcon } from './ProviderIcon'
+import { ProviderLogo } from './ProviderLogo'
 
 interface Props {
   value: string
@@ -11,9 +11,10 @@ interface Props {
   loading: boolean
   model: ModelId
   onModelChange: (m: ModelId) => void
+  provider: Provider
 }
 
-export function SearchBar({ value, onChange, onSearch, onCancel, loading, model, onModelChange }: Props) {
+export function SearchBar({ value, onChange, onSearch, onCancel, loading, model, onModelChange, provider }: Props) {
   const modelInfo = MODEL_OPTIONS.find(o => o.id === model) ?? MODEL_OPTIONS[0]
 
   function submit() {
@@ -73,10 +74,10 @@ export function SearchBar({ value, onChange, onSearch, onCancel, loading, model,
           disabled={loading}
           align="right"
           triggerStyle={{ padding: '9px 10px', fontSize: 13 }}
-          options={MODEL_OPTIONS.map(opt => ({
+          options={modelsForProvider(provider).map(opt => ({
             value: opt.id,
             label: opt.label,
-            icon: <ProviderIcon provider={providerFor(opt.id)} />,
+            icon: <ProviderLogo provider={provider} />,
           }))}
         />
 
@@ -150,7 +151,7 @@ export function SearchBar({ value, onChange, onSearch, onCancel, loading, model,
             letterSpacing: '0.03em',
           }}
         >
-          {modelInfo.label.split(' — ')[0]}
+          {modelInfo.label.split(' · ')[0]}
         </span>
         <span style={{ color: 'var(--border-strong)', fontSize: 10 }}>·</span>
         <span

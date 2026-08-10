@@ -67,7 +67,9 @@ export function IconSelect<T extends string>({ value, options, onChange, disable
             borderRadius: 8,
             boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
             overflow: 'hidden',
-            zIndex: 20,
+            // Leaflet's own panes/controls run up to z-index 1000 — well above this component's
+            // old value of 20, which let the map render on top of an open dropdown. Clear it.
+            zIndex: 5000,
           }}
         >
           {options.map(opt => (

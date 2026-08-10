@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { Location, Provider, QueryResult, StatusState } from '../types'
 import { ResultItem } from './ResultItem'
 import { InsightPanel } from './InsightPanel'
 import { StatusBar } from './StatusBar'
 import { IconSelect } from './IconSelect'
-import { ProviderIcon } from './ProviderIcon'
+import { ProviderLogo } from './ProviderLogo'
 
 const KEY_COPY: Record<Provider, { label: string; placeholder: string }> = {
   anthropic: { label: 'Anthropic', placeholder: 'sk-ant-…' },
@@ -21,7 +21,8 @@ interface Props {
   analysingPattern: boolean
   status: StatusState
   apiKeys: Record<Provider, string>
-  activeProvider: Provider
+  provider: Provider
+  onProviderChange: (provider: Provider) => void
   onApiKeyChange: (provider: Provider, key: string) => void
 }
 
@@ -35,26 +36,21 @@ export function Sidebar({
   analysingPattern,
   status,
   apiKeys,
-  activeProvider,
+  provider,
+  onProviderChange,
   onApiKeyChange,
 }: Props) {
-  // Which provider's key this panel is showing/editing — independent of activeProvider so a key
-  // can be entered ahead of switching models to it (the "hot swap": both keys can already be
-  // sitting in localStorage by the time you pick a model that needs the other one). Jumps to
-  // match activeProvider whenever the model selector changes, but the dropdown can browse away.
-  const [panelProvider, setPanelProvider] = useState<Provider>(activeProvider)
-  useEffect(() => setPanelProvider(activeProvider), [activeProvider])
   const [keyInput, setKeyInput] = useState('')
 
   function saveKey() {
     const k = keyInput.trim()
     if (!k) return
-    onApiKeyChange(panelProvider, k)
+    onApiKeyChange(provider, k)
     setKeyInput('')
   }
 
-  const activeKey = apiKeys[activeProvider]
-  const hasPanelKey = !!apiKeys[panelProvider]
+  const activeKey = apiKeys[provider]
+  const hasKey = !!activeKey
 
   return (
     <div
@@ -78,26 +74,26 @@ export function Sidebar({
       >
         <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
           <IconSelect
-            value={panelProvider}
-            onChange={setPanelProvider}
+            value={provider}
+            onChange={onProviderChange}
             triggerStyle={{ padding: '6px 8px', fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase' }}
             options={(Object.keys(KEY_COPY) as Provider[]).map(p => ({
               value: p,
               label: KEY_COPY[p].label,
-              icon: <ProviderIcon provider={p} />,
+              icon: <ProviderLogo provider={p} />,
             }))}
           />
           <span
             style={{
               fontFamily: "Helvetica, Arial, sans-serif",
               fontSize: 10,
-              color: hasPanelKey ? 'var(--accent)' : 'var(--ink-faint)',
+              color: hasKey ? 'var(--accent)' : 'var(--ink-faint)',
               display: 'flex',
               alignItems: 'center',
               whiteSpace: 'nowrap',
             }}
           >
-            {hasPanelKey ? '● key saved' : '○ no key yet'}
+            {hasKey ? '● key saved' : '○ no key yet'}
           </span>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
@@ -106,7 +102,7 @@ export function Sidebar({
               value={keyInput}
               onChange={e => setKeyInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && saveKey()}
-              placeholder={KEY_COPY[panelProvider].placeholder}
+              placeholder={KEY_COPY[provider].placeholder}
               style={{
                 flex: 1,
                 padding: '8px 10px',
