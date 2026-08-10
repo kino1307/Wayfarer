@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Location, Provider, QueryResult, StatusState } from '../types'
 import { ResultItem } from './ResultItem'
 import { InsightPanel } from './InsightPanel'
 import { StatusBar } from './StatusBar'
 
 const KEY_COPY: Record<Provider, { label: string; placeholder: string }> = {
-  anthropic: { label: 'Anthropic API Key', placeholder: 'sk-ant-…' },
-  openai: { label: 'OpenAI API Key', placeholder: 'sk-…' },
+  anthropic: { label: 'Anthropic', placeholder: 'sk-ant-…' },
+  openai: { label: 'OpenAI', placeholder: 'sk-…' },
 }
 
 interface Props {
@@ -18,9 +18,9 @@ interface Props {
   onAnalyse: () => void
   analysingPattern: boolean
   status: StatusState
-  apiKey: string
-  provider: Provider
-  onApiKeyChange: (key: string) => void
+  apiKeys: Record<Provider, string>
+  activeProvider: Provider
+  onApiKeyChange: (provider: Provider, key: string) => void
 }
 
 export function Sidebar({
@@ -32,22 +32,27 @@ export function Sidebar({
   onAnalyse,
   analysingPattern,
   status,
-  apiKey,
-  provider,
+  apiKeys,
+  activeProvider,
   onApiKeyChange,
 }: Props) {
+  // Which provider's key this panel is showing/editing — independent of activeProvider so a key
+  // can be entered ahead of switching models to it (the "hot swap": both keys can already be
+  // sitting in localStorage by the time you pick a model that needs the other one). Jumps to
+  // match activeProvider whenever the model selector changes, but the dropdown can browse away.
+  const [panelProvider, setPanelProvider] = useState<Provider>(activeProvider)
+  useEffect(() => setPanelProvider(activeProvider), [activeProvider])
   const [keyInput, setKeyInput] = useState('')
-  const [saved, setSaved] = useState(false)
 
   function saveKey() {
     const k = keyInput.trim()
     if (!k) return
-    onApiKeyChange(k)
+    onApiKeyChange(panelProvider, k)
     setKeyInput('')
-    setSaved(true)
   }
 
-  const showSetup = !apiKey && !saved
+  const activeKey = apiKeys[activeProvider]
+  const hasPanelKey = !!apiKeys[panelProvider]
 
   return (
     <div
@@ -61,34 +66,56 @@ export function Sidebar({
         overflow: 'hidden',
       }}
     >
-      {/* Setup panel */}
-      {showSetup && (
-        <div
-          style={{
-            padding: '16px',
-            borderBottom: '1px solid var(--border)',
-            flexShrink: 0,
-          }}
-        >
-          <div
+      {/* Key setup — always available so both providers' keys can be managed/hot-swapped */}
+      <div
+        style={{
+          padding: '16px',
+          borderBottom: '1px solid var(--border)',
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+          <select
+            value={panelProvider}
+            onChange={e => setPanelProvider(e.target.value as Provider)}
+            style={{
+              padding: '6px 8px',
+              border: '1px solid var(--border-strong)',
+              borderRadius: 6,
+              fontSize: 11,
+              fontFamily: "'DM Mono', monospace",
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              background: 'var(--surface)',
+              color: 'var(--ink-muted)',
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            {(Object.keys(KEY_COPY) as Provider[]).map(p => (
+              <option key={p} value={p}>{KEY_COPY[p].label}</option>
+            ))}
+          </select>
+          <span
             style={{
               fontFamily: "'DM Mono', monospace",
               fontSize: 10,
-              color: 'var(--ink-faint)',
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              marginBottom: 8,
+              color: hasPanelKey ? 'var(--accent)' : 'var(--ink-faint)',
+              display: 'flex',
+              alignItems: 'center',
+              whiteSpace: 'nowrap',
             }}
           >
-            {KEY_COPY[provider].label}
-          </div>
-          <div style={{ display: 'flex', gap: 6 }}>
+            {hasPanelKey ? '● key saved' : '○ no key yet'}
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
             <input
               type="password"
               value={keyInput}
               onChange={e => setKeyInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && saveKey()}
-              placeholder={KEY_COPY[provider].placeholder}
+              placeholder={KEY_COPY[panelProvider].placeholder}
               style={{
                 flex: 1,
                 padding: '8px 10px',
@@ -128,8 +155,7 @@ export function Sidebar({
           >
             Key sent with each request. Never stored server-side.
           </p>
-        </div>
-      )}
+      </div>
 
       {/* Results header */}
       {result && (
@@ -313,7 +339,7 @@ export function Sidebar({
               lineHeight: 1.6,
             }}
           >
-            {apiKey
+            {activeKey
               ? 'Enter a query and click Map it →'
               : 'Add your API key above to get started'}
           </div>

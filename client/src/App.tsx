@@ -7,7 +7,7 @@ import { Sidebar } from './components/Sidebar'
 import { DisclaimerModal } from './components/DisclaimerModal'
 import { useQuery } from './hooks/useQuery'
 import { useHistory } from './hooks/useHistory'
-import { nodeTrust, providerFor, type ModelId } from './types'
+import { nodeTrust, providerFor, type ModelId, type Provider } from './types'
 
 // Filter pins by trust tier — the only per-node "type" axis that varies within one result
 // (query_role is uniform per query). Labels mirror nodeTrust().marker.
@@ -28,7 +28,7 @@ export default function App() {
   )
   const provider = providerFor(model)
   // BYOK only: keys live in the user's browser (localStorage), never embedded in the build.
-  const [apiKeys, setApiKeys] = useState<Record<'anthropic' | 'openai', string>>(() => ({
+  const [apiKeys, setApiKeys] = useState<Record<Provider, string>>(() => ({
     anthropic: localStorage.getItem(KEY_STORAGE.anthropic) ?? '',
     openai: localStorage.getItem(KEY_STORAGE.openai) ?? '',
   }))
@@ -42,9 +42,9 @@ export default function App() {
     localStorage.setItem('wayfarer_dark', String(isDark))
   }, [isDark])
 
-  function handleApiKeyChange(key: string) {
-    setApiKeys(prev => ({ ...prev, [provider]: key }))
-    const slot = KEY_STORAGE[provider]
+  function handleApiKeyChange(p: Provider, key: string) {
+    setApiKeys(prev => ({ ...prev, [p]: key }))
+    const slot = KEY_STORAGE[p]
     if (key) localStorage.setItem(slot, key)
     else localStorage.removeItem(slot)
   }
@@ -154,8 +154,8 @@ export default function App() {
           onAnalyse={analysePattern}
           analysingPattern={analysingPattern}
           status={status}
-          apiKey={apiKey}
-          provider={provider}
+          apiKeys={apiKeys}
+          activeProvider={provider}
           onApiKeyChange={handleApiKeyChange}
         />
       </div>

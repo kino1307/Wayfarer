@@ -9,7 +9,6 @@ services:
       # local (docker compose up on localhost:8080); a deploy's own .env overrides this to its
       # real public origin (e.g. https://wayfarer.wjleece.dev) without editing this committed file.
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3013/api/health"]
       interval: 10s

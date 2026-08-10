@@ -57,8 +57,8 @@ docker compose up --build
 ```
 
 Open [http://localhost:8080](http://localhost:8080). See [`docker-compose.yml`](docker-compose.yml)
-and `.env.example` for configuration (`ALLOWED_ORIGINS`, optional `GEMINI_API_KEY` for the
-Gemini benchmark model). No Anthropic key is needed server-side — BYOK is entered in the browser.
+and `.env.example` for configuration (`ALLOWED_ORIGINS`). No provider key is needed
+server-side — BYOK is entered in the browser.
 
 ## Stack
 

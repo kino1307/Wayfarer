@@ -22,33 +22,9 @@ function modelBenefitsFromCaching(apiModel: string): boolean {
   return !apiModel.includes('haiku')
 }
 
-// Gemini benchmark path (Stage 5). A `gemini:` model id routes here, using a SERVER-SIDE
-// GEMINI_API_KEY (not the BYOK Anthropic header) via Gemini's OpenAI-compatible endpoint — so no
-// new SDK, just fetch, and the same messages shape. No prompt caching (Gemini has no cache_control).
-// ponytail: benchmark-only reintroduction of a provider branch; keep it to this one function. If
-// Gemini wins the benchmark, promote to a real dispatcher; if it loses, delete this and the
-// gemini: VALID_MODELS/PRICING entries.
-const GEMINI_OPENAI = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
-async function geminiChat(model: string, system: string | undefined, messages: ChatMessage[], maxTokens: number): Promise<string> {
-  const key = process.env.GEMINI_API_KEY
-  if (!key) throw new Error('GEMINI_API_KEY not set (server-side)')
-  const msgs = [...(system ? [{ role: 'system', content: system }] : []), ...messages]
-  const res = await fetch(GEMINI_OPENAI, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-    body: JSON.stringify({ model: model.replace(/^gemini:/, ''), messages: msgs, max_tokens: maxTokens }),
-  })
-  if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 200)}`)
-  const data = (await res.json()) as { choices?: { message?: { content?: string } }[]; usage?: { prompt_tokens?: number; completion_tokens?: number } }
-  recordUsage({ input: data.usage?.prompt_tokens ?? 0, output: data.usage?.completion_tokens ?? 0, cacheRead: 0, cacheWrite: 0 })
-  const text = data.choices?.[0]?.message?.content
-  if (!text) throw new Error('Empty response from Gemini')
-  return text
-}
-
-// OpenAI, BYOK (unlike the Gemini benchmark path above, the key is the user's own — same header
-// the Anthropic path uses). Chat Completions accepts a `system` role message directly, no
-// prompt-caching support here (Claude-only feature), so `cacheable` is simply ignored.
+// OpenAI, BYOK — the key is the user's own, same per-request header the Anthropic path uses.
+// Chat Completions accepts a `system` role message directly, no prompt-caching support here
+// (Claude-only feature), so `cacheable` is simply ignored.
 async function openaiChat(apiKey: string, model: string, system: string | undefined, messages: ChatMessage[], maxTokens: number): Promise<string> {
   const msgs = [...(system ? [{ role: 'system', content: system }] : []), ...messages]
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -73,7 +49,6 @@ async function chat(
   maxTokens: number,
   cacheable = false,
 ): Promise<string> {
-  if (model.startsWith('gemini:')) return geminiChat(model, system, messages, maxTokens)
   if (model.startsWith('openai:')) return openaiChat(apiKey, model, system, messages, maxTokens)
   const client = new Anthropic({ apiKey })
   const EPHEMERAL = { type: 'ephemeral' as const }
