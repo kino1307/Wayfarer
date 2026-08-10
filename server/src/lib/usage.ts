@@ -42,6 +42,9 @@ const PRICING: Record<string, { in: number; out: number }> = {
   // won't scale to many users, so cost the comparison at the paid rate to see the real at-scale price.
   'gemini:gemini-2.0-flash': { in: 0.1, out: 0.4 },
   'gemini:gemini-2.5-flash': { in: 0.3, out: 2.5 },
+  'openai:gpt-5.6-sol': { in: 5, out: 30 },
+  'openai:gpt-5.6-terra': { in: 2, out: 12 },
+  'openai:gpt-5.6-luna': { in: 0.2, out: 1.2 },
 }
 function priceFor(model: string): { in: number; out: number } {
   return PRICING[model] ?? { in: 1, out: 5 }

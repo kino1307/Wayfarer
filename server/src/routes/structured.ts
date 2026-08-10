@@ -69,6 +69,10 @@ const VALID_MODELS = new Set([
   // Stage 5 benchmark candidates (server-side GEMINI_API_KEY, not BYOK).
   'gemini:gemini-2.0-flash',
   'gemini:gemini-2.5-flash',
+  // OpenAI, BYOK — same per-request key header as the Anthropic path.
+  'openai:gpt-5.6-sol',
+  'openai:gpt-5.6-terra',
+  'openai:gpt-5.6-luna',
 ])
 
 // Step 1 — identify the specific named anchor entities in the query (a band, person,

@@ -63,7 +63,7 @@ export function DisclaimerModal({ onDismiss }: Props) {
           gap: 12,
         }}>
           <p style={{ margin: 0 }}>
-            Wayfarer uses Claude to translate your query into a <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>Wikidata</strong> query — a
+            Wayfarer uses an LLM (Claude or GPT — your choice) to translate your query into a <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>Wikidata</strong> query — a
             structured, community-maintained knowledge base — then plots what Wikidata returns.
             For well-modelled topics (capitals, members of a group, battles) the results are precise and grounded.
           </p>

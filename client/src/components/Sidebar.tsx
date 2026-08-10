@@ -1,8 +1,13 @@
 import { useState } from 'react'
-import type { Location, QueryResult, StatusState } from '../types'
+import type { Location, Provider, QueryResult, StatusState } from '../types'
 import { ResultItem } from './ResultItem'
 import { InsightPanel } from './InsightPanel'
 import { StatusBar } from './StatusBar'
+
+const KEY_COPY: Record<Provider, { label: string; placeholder: string }> = {
+  anthropic: { label: 'Anthropic API Key', placeholder: 'sk-ant-…' },
+  openai: { label: 'OpenAI API Key', placeholder: 'sk-…' },
+}
 
 interface Props {
   result: QueryResult | null
@@ -14,6 +19,7 @@ interface Props {
   analysingPattern: boolean
   status: StatusState
   apiKey: string
+  provider: Provider
   onApiKeyChange: (key: string) => void
 }
 
@@ -27,6 +33,7 @@ export function Sidebar({
   analysingPattern,
   status,
   apiKey,
+  provider,
   onApiKeyChange,
 }: Props) {
   const [keyInput, setKeyInput] = useState('')
@@ -73,7 +80,7 @@ export function Sidebar({
               marginBottom: 8,
             }}
           >
-            Anthropic API Key
+            {KEY_COPY[provider].label}
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <input
@@ -81,7 +88,7 @@ export function Sidebar({
               value={keyInput}
               onChange={e => setKeyInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && saveKey()}
-              placeholder="sk-ant-…"
+              placeholder={KEY_COPY[provider].placeholder}
               style={{
                 flex: 1,
                 padding: '8px 10px',

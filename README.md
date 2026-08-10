@@ -64,7 +64,7 @@ Gemini benchmark model). No Anthropic key is needed server-side — BYOK is ente
 
 - **Client:** React 18, TypeScript, Vite, Tailwind CSS, Leaflet / React-Leaflet
 - **Server:** Node.js, Express, TypeScript
-- **AI:** Anthropic Claude (Haiku / Sonnet / Opus), BYOK — no server-side key required
+- **AI:** Anthropic Claude (Haiku / Sonnet / Opus) or OpenAI GPT-5.6 (Sol / Terra / Luna), BYOK — no server-side key required
 - **Knowledge:** [Wikidata](https://www.wikidata.org/) (CC0, queried live via SPARQL/WDQS)
 - **Map tiles:** OpenStreetMap (free, no key required)
 

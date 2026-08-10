@@ -33,7 +33,7 @@ export function useQuery(apiKey: string, model: string, onSearch: (q: string) =>
   const runStructured = useCallback(
     async (query: string) => {
       if (!apiKey) {
-        setStatus({ phase: 'error', message: 'Enter your Anthropic API key first' })
+        setStatus({ phase: 'error', message: 'Enter your API key first' })
         return
       }
 

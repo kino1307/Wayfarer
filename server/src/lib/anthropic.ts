@@ -46,6 +46,24 @@ async function geminiChat(model: string, system: string | undefined, messages: C
   return text
 }
 
+// OpenAI, BYOK (unlike the Gemini benchmark path above, the key is the user's own — same header
+// the Anthropic path uses). Chat Completions accepts a `system` role message directly, no
+// prompt-caching support here (Claude-only feature), so `cacheable` is simply ignored.
+async function openaiChat(apiKey: string, model: string, system: string | undefined, messages: ChatMessage[], maxTokens: number): Promise<string> {
+  const msgs = [...(system ? [{ role: 'system', content: system }] : []), ...messages]
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ model: model.replace(/^openai:/, ''), messages: msgs, max_completion_tokens: maxTokens }),
+  })
+  if (!res.ok) throw new Error(`OpenAI ${res.status}: ${(await res.text()).slice(0, 200)}`)
+  const data = (await res.json()) as { choices?: { message?: { content?: string } }[]; usage?: { prompt_tokens?: number; completion_tokens?: number } }
+  recordUsage({ input: data.usage?.prompt_tokens ?? 0, output: data.usage?.completion_tokens ?? 0, cacheRead: 0, cacheWrite: 0 })
+  const text = data.choices?.[0]?.message?.content
+  if (!text) throw new Error('Empty response from OpenAI')
+  return text
+}
+
 // One dispatch path for both the single-prompt and multi-turn callers.
 async function chat(
   apiKey: string,
@@ -56,6 +74,7 @@ async function chat(
   cacheable = false,
 ): Promise<string> {
   if (model.startsWith('gemini:')) return geminiChat(model, system, messages, maxTokens)
+  if (model.startsWith('openai:')) return openaiChat(apiKey, model, system, messages, maxTokens)
   const client = new Anthropic({ apiKey })
   const EPHEMERAL = { type: 'ephemeral' as const }
   const useCache = cacheable && messages.length > 0 && modelBenefitsFromCaching(model)

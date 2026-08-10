@@ -18,7 +18,10 @@ router.post('/', async (req: Request, res: Response) => {
   }
   const apiKey = req.headers['x-api-key'] as string
 
-  const VALID_MODELS = new Set(['claude-haiku-4-5-20251001', 'claude-sonnet-4-6', 'claude-opus-4-8', 'claude-opus-4-6'])
+  const VALID_MODELS = new Set([
+    'claude-haiku-4-5-20251001', 'claude-sonnet-4-6', 'claude-opus-4-8', 'claude-opus-4-6',
+    'openai:gpt-5.6-sol', 'openai:gpt-5.6-terra', 'openai:gpt-5.6-luna',
+  ])
 
   if (!apiKey) return res.status(401).json({ error: 'Missing API key' })
   if (!query || !locations || !model) return res.status(400).json({ error: 'Missing required fields' })

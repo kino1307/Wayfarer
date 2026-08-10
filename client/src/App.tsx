@@ -7,7 +7,7 @@ import { Sidebar } from './components/Sidebar'
 import { DisclaimerModal } from './components/DisclaimerModal'
 import { useQuery } from './hooks/useQuery'
 import { useHistory } from './hooks/useHistory'
-import { nodeTrust, type ModelId } from './types'
+import { nodeTrust, providerFor, type ModelId } from './types'
 
 // Filter pins by trust tier — the only per-node "type" axis that varies within one result
 // (query_role is uniform per query). Labels mirror nodeTrust().marker.
@@ -18,14 +18,21 @@ function getInitialDark(): boolean {
   return stored === 'true'
 }
 
+// One localStorage slot per provider — switching models (Claude <-> GPT) shouldn't blow away
+// a key you already entered for the other provider.
+const KEY_STORAGE = { anthropic: 'wayfarer_api_key', openai: 'wayfarer_api_key_openai' } as const
+
 export default function App() {
-  // BYOK only: the key lives in the user's browser (localStorage), never embedded in the build.
-  const [apiKey, setApiKey] = useState<string>(
-    () => localStorage.getItem('wayfarer_api_key') ?? ''
-  )
   const [model, setModel] = useState<ModelId>(
     () => (localStorage.getItem('wayfarer_model') as ModelId) ?? 'claude-sonnet-4-6'
   )
+  const provider = providerFor(model)
+  // BYOK only: keys live in the user's browser (localStorage), never embedded in the build.
+  const [apiKeys, setApiKeys] = useState<Record<'anthropic' | 'openai', string>>(() => ({
+    anthropic: localStorage.getItem(KEY_STORAGE.anthropic) ?? '',
+    openai: localStorage.getItem(KEY_STORAGE.openai) ?? '',
+  }))
+  const apiKey = apiKeys[provider]
   const [isDark, setIsDark] = useState<boolean>(getInitialDark)
   const [searchValue, setSearchValue] = useState('')
   const [showDisclaimer, setShowDisclaimer] = useState(true)
@@ -36,9 +43,10 @@ export default function App() {
   }, [isDark])
 
   function handleApiKeyChange(key: string) {
-    setApiKey(key)
-    if (key) localStorage.setItem('wayfarer_api_key', key)
-    else localStorage.removeItem('wayfarer_api_key')
+    setApiKeys(prev => ({ ...prev, [provider]: key }))
+    const slot = KEY_STORAGE[provider]
+    if (key) localStorage.setItem(slot, key)
+    else localStorage.removeItem(slot)
   }
 
   function handleModelChange(m: ModelId) {
@@ -147,6 +155,7 @@ export default function App() {
           analysingPattern={analysingPattern}
           status={status}
           apiKey={apiKey}
+          provider={provider}
           onApiKeyChange={handleApiKeyChange}
         />
       </div>
