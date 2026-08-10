@@ -75,6 +75,13 @@ body,
   display: none;
 }
 
+/* Leaflet's own stylesheet hardcodes the zoom +/- glyphs to a monospace stack; override to match
+   the rest of the app. */
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+  font-family: Helvetica, Arial, sans-serif !important;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 4px;
