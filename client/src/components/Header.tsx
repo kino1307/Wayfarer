@@ -36,17 +36,7 @@ export function Header({ isDark, onToggleDark }: Props) {
             letterSpacing: '-0.5px',
           }}
         >
-          Way
-        </span>
-        <span
-          style={{
-            fontFamily: "'Instrument Serif', serif",
-            fontSize: 22,
-            color: 'var(--accent)',
-            letterSpacing: '-0.5px',
-          }}
-        >
-          farer
+          Wayfarer
         </span>
       </div>
 
