@@ -25,19 +25,42 @@ function modelBenefitsFromCaching(apiModel: string): boolean {
 // OpenAI, BYOK — the key is the user's own, same per-request header the Anthropic path uses.
 // Chat Completions accepts a `system` role message directly, no prompt-caching support here
 // (Claude-only feature), so `cacheable` is simply ignored.
+const OPENAI_MAX_ATTEMPTS = 3
+
 async function openaiChat(apiKey: string, model: string, system: string | undefined, messages: ChatMessage[], maxTokens: number): Promise<string> {
   const msgs = [...(system ? [{ role: 'system', content: system }] : []), ...messages]
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model: model.replace(/^openai:/, ''), messages: msgs, max_completion_tokens: maxTokens }),
-  })
-  if (!res.ok) throw new Error(`OpenAI ${res.status}: ${(await res.text()).slice(0, 200)}`)
-  const data = (await res.json()) as { choices?: { message?: { content?: string } }[]; usage?: { prompt_tokens?: number; completion_tokens?: number } }
-  recordUsage({ input: data.usage?.prompt_tokens ?? 0, output: data.usage?.completion_tokens ?? 0, cacheRead: 0, cacheWrite: 0 })
-  const text = data.choices?.[0]?.message?.content
-  if (!text) throw new Error('Empty response from OpenAI')
-  return text
+  const body = JSON.stringify({ model: model.replace(/^openai:/, ''), messages: msgs, max_completion_tokens: maxTokens })
+
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body,
+    })
+    if (!res.ok) throw new Error(`OpenAI ${res.status}: ${(await res.text()).slice(0, 200)}`)
+
+    let data: { choices?: { message?: { content?: string } }[]; usage?: { prompt_tokens?: number; completion_tokens?: number } }
+    try {
+      data = await res.json() as typeof data
+    } catch (parseErr) {
+      // Same transient truncated/corrupted-body failure mode WDQS hits under load — a raw
+      // stream-decode error (e.g. "Error in input stream") means nothing to a user, so retry
+      // with backoff and only surface something actionable if it keeps happening.
+      const raw = parseErr instanceof Error ? parseErr.message : String(parseErr)
+      if (attempt < OPENAI_MAX_ATTEMPTS - 1) {
+        console.warn(`[openai] malformed response body (${raw}) — retrying (attempt ${attempt + 1}/${OPENAI_MAX_ATTEMPTS})`)
+        await new Promise(r => setTimeout(r, 500 * 2 ** attempt))
+        continue
+      }
+      console.error(`[openai] malformed response body after ${attempt + 1} attempt(s): ${raw}`)
+      throw new Error('OpenAI returned a corrupted response — please try again.')
+    }
+
+    recordUsage({ input: data.usage?.prompt_tokens ?? 0, output: data.usage?.completion_tokens ?? 0, cacheRead: 0, cacheWrite: 0 })
+    const text = data.choices?.[0]?.message?.content
+    if (!text) throw new Error('Empty response from OpenAI')
+    return text
+  }
 }
 
 // One dispatch path for both the single-prompt and multi-turn callers.

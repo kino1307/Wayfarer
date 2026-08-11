@@ -30,7 +30,7 @@ const DEFAULT_TIMEOUT_MS = 45_000
 // 429 should NOT hard-fail the user's query — back off and retry within the time budget, honouring
 // the Retry-After header when WDQS sends one. PID R6: loud failure only after we've genuinely given up.
 const RETRYABLE_STATUS = new Set([429, 503])
-const MAX_ATTEMPTS = 4
+const MAX_ATTEMPTS = 6
 
 // Abortable sleep: resolves after ms, or rejects if the controller fires (timeout/cancel).
 function delay(ms: number, signal: AbortSignal): Promise<void> {
@@ -116,16 +116,23 @@ export async function runSparql(query: string, opts: SparqlOpts = {}): Promise<S
           // Blazegraph failure mode, not ours) — treat it exactly like a 503: transient, worth a
           // backoff+retry within budget, never an uncaught crash (PID R6, loud only after
           // genuinely giving up).
+          const raw = parseErr instanceof Error ? parseErr.message : String(parseErr)
           recordWdqsTrouble()
           if (attempt < MAX_ATTEMPTS - 1) {
             const backoff = Math.min(500 * 2 ** attempt, 4000)
             if (Date.now() + backoff < deadline) {
-              console.warn(`[wdqs] malformed JSON body — backing off ${backoff}ms (attempt ${attempt + 1}/${MAX_ATTEMPTS})`)
+              console.warn(`[wdqs] malformed JSON body (${raw}) — backing off ${backoff}ms (attempt ${attempt + 1}/${MAX_ATTEMPTS})`)
               await delay(backoff, ctrl.signal)
               continue
             }
           }
-          throw new SparqlError(502, `malformed response body: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`)
+          // The raw error (a low-level stream/decompression message like "Error in input
+          // stream") means nothing to a user and isn't ours to explain — log it for us, show
+          // them something actionable instead. This is the SparqlError's own message, so every
+          // call site that lets it bubble up uncaught (most of the agent loop doesn't have its
+          // own translation) inherits the friendly wording for free.
+          console.error(`[wdqs] malformed response body after ${attempt + 1} attempt(s): ${raw}`)
+          throw new SparqlError(502, 'Wikidata returned a corrupted response — please try again.')
         }
       }
       const body = await res.text().catch(() => '')
