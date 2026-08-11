@@ -19,7 +19,7 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? 'http://localhost:5173')
 app.use(cors({ origin: ALLOWED_ORIGINS }))
 app.use(express.json({ limit: '2mb' }))
 
-// ponytail: in-memory fixed-window per-IP rate limit. Single-instance only; swap to a shared
+// In-memory fixed-window per-IP rate limit. Single-instance only; swap to a shared
 // store (Redis) or express-rate-limit if we run multiple instances or need sliding windows.
 // Each request runs a 20-100s LLM agent loop, so a low cap is the right abuse guard.
 const RATE_WINDOW_MS = 60_000

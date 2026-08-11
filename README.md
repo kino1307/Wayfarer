@@ -73,4 +73,4 @@ server-side — BYOK is entered in the browser.
 - Results are cached cross-user for 24h (identical query + model = free, instant repeat) —
   in-memory by default; swap to Redis before running multiple server instances.
 - A per-IP rate limit protects the expensive LLM-agent endpoints; it's in-memory too and is
-  single-instance only (see the `ponytail:` comment in `server/src/index.ts`).
+  single-instance only (see the comment in `server/src/index.ts`).

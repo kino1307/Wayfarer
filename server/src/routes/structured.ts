@@ -245,11 +245,11 @@ function validate(req: Request, res: Response): { query: string; model: string; 
 
 // Sanity ceiling on raw structured rows before the expensive verify+geocode+serialize pipeline
 // runs on every one of them: a result this size means the query is far too broad to have been
-// the user's real intent, is unusable as individual map pins anyway, and (measured this session,
-// a 14.5k-row response) can make the JSON payload large/slow enough that it never finishes over
+// the user's real intent, is unusable as individual map pins anyway, and (measured with a
+// 14.5k-row response) can make the JSON payload large/slow enough that it never finishes over
 // the wire — full spend, zero delivered result. Degrade to the same bounded, curated asserted
 // path already used for zero structured rows.
-// ponytail: flat cap, revisit if a legitimate correct set starts landing above it.
+// Flat cap, revisit if a legitimate correct set starts landing above it.
 const MAX_STRUCTURED_ROWS = 3000
 
 // The full structured pipeline (PID §5), emitting live progress. Shared by the JSON and the

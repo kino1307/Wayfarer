@@ -12,8 +12,8 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         '/api': {
-          // ponytail: 127.0.0.1, not localhost — avoids Node's happy-eyeballs dual-stack
-          // connect (ENOBUFS on some Windows setups) when proxying to the API.
+          // 127.0.0.1, not localhost — avoids Node's happy-eyeballs dual-stack
+          // connect (ENOBUFS on some setups) when proxying to the API.
           target: `http://127.0.0.1:${port}`,
           changeOrigin: true,
         },

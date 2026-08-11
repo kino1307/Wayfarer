@@ -159,7 +159,7 @@ const MIN_ANCHORS = 8
 
 // Trimmed min/max: drop the few most-extreme values per axis before bounding, so a single
 // same-name mis-resolution (a "Richmond" that landed in London) can't inflate the box and silently
-// disable the guard. ponytail: a percentile trim, not full antimeridian geometry — a genuinely
+// disable the guard. A percentile trim, not full antimeridian geometry — a genuinely
 // dateline-spanning answer set just gets a wide longitude box and is then guarded on latitude only,
 // which is rare and benign (no obvious cross-region outlier to catch there anyway).
 function trimmedRange(vals: number[]): { min: number; max: number } {
@@ -198,7 +198,7 @@ function inBox(lat: number, lng: number, b: GeoBox): boolean {
 // Re-place fallback pins that sit outside the verified envelope; drop (→ unresolved) any the model
 // still can't place in-region. Returns the corrected node list plus newly-unresolved entries.
 //
-// ponytail: expected false-positive — a region/operation entity (e.g. "Flanders Fields", "Spring
+// Expected false-positive — a region/operation entity (e.g. "Flanders Fields", "Spring
 // Offensive") whose fallback coordinate is a centroid/guess can land outside the point-entity
 // envelope and demote to unverified even when it's geographically central. This is correct, not a
 // bug: the coordinate genuinely IS approximate, so flagging it is R6 (shown, never silently wrong).

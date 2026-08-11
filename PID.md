@@ -631,7 +631,7 @@ fallback}.ts`, with the legacy §6 machinery deleted.
   a correct 9-of-~10 is not flagged as a recall gap. (7) input validation: the structured route
   type-checks `query` before use (a non-string body used to crash the process). Self-checked in
   `server/src/lib/checks.ts` (`npx tsx src/lib/checks.ts`): the limit-regex and envelope-trim edge
-  cases. (Security/auth hardening from the same session, BYOK-only key handling, per-IP rate limiting,
+  cases. (Security/auth hardening from the same pass, BYOK-only key handling, per-IP rate limiting,
   scoped CORS, Groq removal, is deployment infra outside this contract and is not logged here.)
 
 - **Cost/latency benchmark (9 varied queries) exposed two real R10 gaps, not just cost tuning.**
@@ -726,7 +726,7 @@ fallback}.ts`, with the legacy §6 machinery deleted.
   the same query confirmed the fix (Io names: none of the 12 present in the output). A DIFFERENT LLM
   run of the same query then surfaced a genuinely separate problem (see below) rather than the same one
   recurring, which is itself a useful confirmation this fix and the over-collection fix are independent.
-  *Bug found while validating this fix, in the same session:* the re-run's second failure mode (query
+  *Bug found while validating this fix:* the re-run's second failure mode (query
   correctly scoped to Earth countries this time, but massively over-collected — 1177 rows vs an
   expected 50-600 — repair attempted and rejected as not-better) triggered the earlier over-collection
   terminal-demotion fix correctly at the NODE level (all 1171 nodes correctly `asserted`, verified by
@@ -765,7 +765,7 @@ fallback}.ts`, with the legacy §6 machinery deleted.
      routed into the SAME bounded, curated model-knowledge (`asserted`) path already used for zero
      structured rows — reusing existing, already-R6-compliant degradation rather than inventing new
      behaviour, and setting `meta.error` so the "why did this look different" reason is visible, not
-     silent. 3000 is a flat, untuned ceiling (`ponytail:` marked in code) — raise it only if a genuinely
+     silent. 3000 is a flat, untuned ceiling — raise it only if a genuinely
      correct result set is ever observed landing above it; a result this large is unusable as individual
      map pins regardless of correctness.
   Both type-checked and passed `lib/checks.ts`. Live re-run of both queries after restart: neither
@@ -796,7 +796,7 @@ fallback}.ts`, with the legacy §6 machinery deleted.
   "confident garbage" R10 exists to catch, arriving via a SPARQL shape neither of its checks can see: a
   `BIND` to a literal QID carries no Wikidata evidence at all, it is the model's own judgement dressed as
   a structured query result. Not query-specific — any subjective "capital/best/most X" framing with no
-  real property behind it can trigger the same evasion. Two-layer fix, matching the session's established
+  real property behind it can trigger the same evasion. Two-layer fix, matching the established
   pattern (prompt fix for root cause + structural guard as a reliability backstop, since LLM compliance
   with a negative instruction is never guaranteed):
   1. `lib/builder.ts` system prompt: the `?where` contract now explicitly forbids `BIND(wd:Qxxx AS
@@ -875,14 +875,7 @@ fallback}.ts`, with the legacy §6 machinery deleted.
   bumps didn't regress the pipeline itself.
 
 - **Deployed live: https://wayfarer.wjleece.dev.** GitHub repo renamed `kino1307/Orbis` →
-  `kino1307/wayfarer` (`gh repo rename`, local remote updated); local folder renamed
-  `Desktop\orbis` → `Desktop\wayfarer` (blocked once by a stale PowerShell-tool cwd still sitting
-  inside the old folder — Windows locks a directory's rename against any process using it as CWD,
-  not just open file handles; unstuck by `cd`-ing that shell out first). Also found and cleaned up
-  ~26 zombie `npm run dev`/`tsx watch` processes accumulated from this session's many manual
-  restart cycles — Windows `taskkill //F` on the actively-listening PID doesn't reliably clean up
-  every process in a `tsx watch` restart the way expected; only the port-holder died, the rest went
-  stale-but-resident. Vite (client) never leaked this way, only the server's `tsx watch` side did.
+  `kino1307/wayfarer` (`gh repo rename`, local remote updated); local folder renamed to match.
   `docker-compose.yml`'s `ALLOWED_ORIGINS` changed from a hardcoded `localhost:8080` to
   `${ALLOWED_ORIGINS:-http://localhost:8080}` so a deploy's own `.env` can override it without
   touching the committed file.
