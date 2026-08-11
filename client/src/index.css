@@ -82,6 +82,13 @@ body,
   font-family: Helvetica, Arial, sans-serif !important;
 }
 
+/* Edge/Chromium render a native password-reveal "eye" icon inside type="password" inputs, but it
+   stays visible (just inert) once the input is disabled — reads as broken, not locked. Hide it
+   there; it still shows normally while the key field is editable. */
+input[type='password']:disabled::-ms-reveal {
+  display: none;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 4px;
