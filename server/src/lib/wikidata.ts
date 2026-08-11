@@ -49,8 +49,8 @@ export interface SparqlOpts {
 // tests, roll-up batches, verification sampling, label backfill). The public endpoint throttles a
 // too-bursty IP — and that throttle surfaces NOT as a clean 429 but as requests silently HANGING
 // until our client timeout fires (a confusing 408 on otherwise-fine queries). Capping concurrency
-// keeps us under the throttle. (Heavy benchmarking this session tripped exactly this; the cap stops
-// it recurring.) Normal pipelines are mostly sequential, so a cap of 3 adds ~nothing in practice.
+// keeps us under the throttle. (Heavy benchmarking tripped exactly this; the cap stops it
+// recurring.) Normal pipelines are mostly sequential, so a cap of 3 adds ~nothing in practice.
 const MAX_WDQS_CONCURRENCY = 3
 let wdqsActive = 0
 const wdqsQueue: Array<() => void> = []
