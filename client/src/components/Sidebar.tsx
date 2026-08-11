@@ -116,8 +116,12 @@ export function Sidebar({
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
             <input
-              type="password"
-              value={keyInput}
+              // Browsers only attach the native password-reveal icon to type="password" fields —
+              // once locked there's nothing to reveal (it's disabled), so drop to a masked plain
+              // text input instead of fighting per-browser CSS to hide an icon that shouldn't be
+              // there in the first place.
+              type={locked ? 'text' : 'password'}
+              value={locked ? '•'.repeat(Math.min(keyInput.length, 32)) : keyInput}
               onChange={e => setKeyInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && saveKey()}
               placeholder={KEY_COPY[provider].placeholder}
