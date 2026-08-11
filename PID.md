@@ -886,7 +886,7 @@ fallback}.ts`, with the legacy §6 machinery deleted.
   `docker-compose.yml`'s `ALLOWED_ORIGINS` changed from a hardcoded `localhost:8080` to
   `${ALLOWED_ORIGINS:-http://localhost:8080}` so a deploy's own `.env` can override it without
   touching the committed file.
-  Deployed to the existing media VPS (`188.245.59.175`, the box already serving `media`/`requests`/
+  Deployed to the existing media VPS (the box already serving `media`/`requests`/
   `portal`.wjleece.dev via Caddy) — deliberately NOT the separate OpenClaw "claw" box, per the
   existing architecture decision to keep them isolated. Shipped via `git archive HEAD | ssh ... tar
   -x` into `/opt/wayfarer` (exactly the committed tree, no rsync available, no need to touch
@@ -897,6 +897,6 @@ fallback}.ts`, with the legacy §6 machinery deleted.
   Verified the deployed containers with a real end-to-end query hitting the VPS directly (bypassing
   DNS): "South American capitals" → 13 nodes, `structured`, `verified` — the deployed build behaves
   identically to local dev. **Still pending, not something I can do myself:** the Cloudflare DNS `A`
-  record (`wayfarer` → `188.245.59.175`, DNS-only) — I don't hold Cloudflare credentials in this
+  record for `wayfarer` (DNS-only) — I don't hold Cloudflare credentials in this
   environment. Caddy's config is already live and will auto-issue the Let's Encrypt cert the moment
   DNS resolves; no further action needed here once that record is added.
