@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Location, Provider, QueryResult, StatusState } from '../types'
 import { ResultItem } from './ResultItem'
 import { InsightPanel } from './InsightPanel'
@@ -40,13 +40,16 @@ export function Sidebar({
   onProviderChange,
   onApiKeyChange,
 }: Props) {
-  const [keyInput, setKeyInput] = useState('')
+  // Reflects whatever's saved for the selected provider, not a blank scratch pad — switching
+  // provider or reopening the app shows the existing key (masked by type="password") instead of
+  // silently going empty and looking like nothing was ever entered.
+  const [keyInput, setKeyInput] = useState(apiKeys[provider] ?? '')
+  useEffect(() => setKeyInput(apiKeys[provider] ?? ''), [provider])
 
   function saveKey() {
     const k = keyInput.trim()
     if (!k) return
     onApiKeyChange(provider, k)
-    setKeyInput('')
   }
 
   const activeKey = apiKeys[provider]
