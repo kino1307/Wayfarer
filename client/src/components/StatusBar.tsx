@@ -54,6 +54,12 @@ export function StatusBar({ status }: Props) {
                 ? 'var(--ink-faint)'
                 : 'var(--ink-muted)',
           letterSpacing: '0.02em',
+          // Flex items don't shrink below their content's natural width by default, so a long
+          // message (e.g. a full API error sentence) pushed the text past the sidebar instead of
+          // wrapping. minWidth: 0 lets it actually shrink to the row and wrap.
+          flex: 1,
+          minWidth: 0,
+          overflowWrap: 'break-word',
         }}
       >
         {status.phase === 'idle' ? 'Ready' : status.message}

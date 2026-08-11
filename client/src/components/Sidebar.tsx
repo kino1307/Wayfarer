@@ -115,30 +115,48 @@ export function Sidebar({
           </span>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-            <input
-              // Browsers only attach the native password-reveal icon to type="password" fields —
-              // once locked there's nothing to reveal (it's disabled), so drop to a masked plain
-              // text input instead of fighting per-browser CSS to hide an icon that shouldn't be
-              // there in the first place.
-              type={locked ? 'text' : 'password'}
-              value={locked ? '•'.repeat(Math.min(keyInput.length, 32)) : keyInput}
-              onChange={e => setKeyInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && saveKey()}
-              placeholder={KEY_COPY[provider].placeholder}
-              disabled={locked || saving}
-              style={{
-                flex: 1,
-                padding: '8px 10px',
-                border: '1px solid var(--border-strong)',
-                borderRadius: 6,
-                fontSize: 12,
-                fontFamily: "Helvetica, Arial, sans-serif",
-                background: locked ? 'var(--border)' : 'var(--surface)',
-                color: locked ? 'var(--ink-muted)' : 'var(--ink)',
-                outline: 'none',
-                cursor: locked ? 'default' : 'text',
-              }}
-            />
+            {/* Always type="password" — switching to type="text" when locked (an earlier attempt
+                at hiding the browser's reveal icon) made the masked dots render at a different
+                size than the native password mask, so the text visibly resized on every
+                lock/unlock. Covering the icon's corner with an opaque block instead keeps one
+                consistent rendering path. */}
+            <div style={{ position: 'relative', flex: 1 }}>
+              <input
+                type="password"
+                value={keyInput}
+                onChange={e => setKeyInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && saveKey()}
+                placeholder={KEY_COPY[provider].placeholder}
+                disabled={locked || saving}
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  border: '1px solid var(--border-strong)',
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontFamily: "Helvetica, Arial, sans-serif",
+                  background: locked ? 'var(--border)' : 'var(--surface)',
+                  color: locked ? 'var(--ink-muted)' : 'var(--ink)',
+                  outline: 'none',
+                  cursor: locked ? 'default' : 'text',
+                }}
+              />
+              {locked && (
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute',
+                    top: 1,
+                    right: 1,
+                    bottom: 1,
+                    width: 30,
+                    background: 'var(--border)',
+                    borderRadius: '0 5px 5px 0',
+                    pointerEvents: 'none',
+                  }}
+                />
+              )}
+            </div>
             {locked ? (
               <button
                 onClick={() => setEditing(true)}
@@ -260,7 +278,7 @@ export function Sidebar({
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--danger)', marginBottom: 4 }}>
               Error
             </div>
-            <div style={{ fontSize: 12, color: 'var(--ink-muted)', lineHeight: 1.5 }}>
+            <div style={{ fontSize: 12, color: 'var(--ink-muted)', lineHeight: 1.5, overflowWrap: 'break-word' }}>
               {status.message}
             </div>
           </div>
