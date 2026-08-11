@@ -44,16 +44,31 @@ export function Sidebar({
   // provider or reopening the app shows the existing key (masked by type="password") instead of
   // silently going empty and looking like nothing was ever entered.
   const [keyInput, setKeyInput] = useState(apiKeys[provider] ?? '')
-  useEffect(() => setKeyInput(apiKeys[provider] ?? ''), [provider])
+  // Locked (disabled input + "Change" button) once a key is saved, so the field reads as settled
+  // rather than an ever-editable scratch pad. Re-opens on "Change"; starts open if nothing's saved.
+  const [editing, setEditing] = useState(!apiKeys[provider])
+  const [saving, setSaving] = useState(false)
+  useEffect(() => {
+    setKeyInput(apiKeys[provider] ?? '')
+    setEditing(!apiKeys[provider])
+    setSaving(false)
+  }, [provider])
 
-  function saveKey() {
+  async function saveKey() {
     const k = keyInput.trim()
-    if (!k) return
+    if (!k || saving) return
+    setSaving(true)
+    // Deliberate — the write itself is instant (localStorage), but a save with zero visible
+    // transition reads as "did that even work?" rather than "saved."
+    await new Promise(r => setTimeout(r, 450))
     onApiKeyChange(provider, k)
+    setSaving(false)
+    setEditing(false)
   }
 
   const activeKey = apiKeys[provider]
   const hasKey = !!activeKey
+  const locked = hasKey && !editing
 
   return (
     <div
@@ -106,6 +121,7 @@ export function Sidebar({
               onChange={e => setKeyInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && saveKey()}
               placeholder={KEY_COPY[provider].placeholder}
+              disabled={locked || saving}
               style={{
                 flex: 1,
                 padding: '8px 10px',
@@ -113,27 +129,61 @@ export function Sidebar({
                 borderRadius: 6,
                 fontSize: 12,
                 fontFamily: "Helvetica, Arial, sans-serif",
-                background: 'var(--surface)',
-                color: 'var(--ink)',
+                background: locked ? 'var(--border)' : 'var(--surface)',
+                color: locked ? 'var(--ink-muted)' : 'var(--ink)',
                 outline: 'none',
+                cursor: locked ? 'default' : 'text',
               }}
             />
-            <button
-              onClick={saveKey}
-              style={{
-                padding: '8px 12px',
-                background: 'var(--accent)',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 6,
-                fontSize: 12,
-                fontWeight: 500,
-                cursor: 'pointer',
-                fontFamily: "Helvetica, Arial, sans-serif",
-              }}
-            >
-              Save
-            </button>
+            {locked ? (
+              <button
+                onClick={() => setEditing(true)}
+                style={{
+                  padding: '8px 12px',
+                  background: 'transparent',
+                  color: 'var(--ink-muted)',
+                  border: '1px solid var(--border-strong)',
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  fontFamily: "Helvetica, Arial, sans-serif",
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Change
+              </button>
+            ) : (
+              <button
+                onClick={saveKey}
+                disabled={saving || !keyInput.trim()}
+                style={{
+                  width: 64,
+                  padding: '8px 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: saving || !keyInput.trim() ? 'var(--ink-faint)' : 'var(--accent)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: saving || !keyInput.trim() ? 'default' : 'pointer',
+                  fontFamily: "Helvetica, Arial, sans-serif",
+                }}
+              >
+                {saving ? (
+                  <svg width="13" height="13" viewBox="0 0 50 50">
+                    <circle cx="25" cy="25" r="20" fill="none" stroke="#fff" strokeWidth="6" strokeLinecap="round" strokeDasharray="80 50">
+                      <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="0.7s" repeatCount="indefinite" />
+                    </circle>
+                  </svg>
+                ) : (
+                  'Save'
+                )}
+              </button>
+            )}
           </div>
           <p
             style={{

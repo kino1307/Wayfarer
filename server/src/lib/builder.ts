@@ -259,7 +259,7 @@ export async function buildSparql(
     messages.push({ role: 'assistant', content: JSON.stringify(action) })
     const tool = action.tool ?? ''
     console.log(`[builder] step${i}: ${tool} — ${(action.thought ?? '').slice(0, 80)}`)
-    opts.onProgress?.((opts.repair ? 'Repairing — ' : '') + (TOOL_LABEL[tool] ?? 'Working…'))
+    opts.onProgress?.((opts.repair ? 'Repairing: ' : '') + (TOOL_LABEL[tool] ?? 'Working…'))
 
     if (tool === 'answer') {
       const sparql = typeof action.args?.sparql === 'string' ? (action.args.sparql as string).trim() : ''
@@ -290,7 +290,7 @@ export async function buildSparql(
       // not let the agent answer an untested-successfully query.
       if (rows != null) everTested = true
       console.log(`[builder]   test → rows=${rows} (${((Date.now() - tTool) / 1000).toFixed(1)}s)`)
-      opts.onProgress?.(rows != null ? `Query returned ${rows} rows — refining…` : 'Query errored — fixing…')
+      opts.onProgress?.(rows != null ? `Query returned ${rows} rows, refining…` : 'Query errored, fixing…')
       const testedSparql = typeof action.args?.sparql === 'string' ? (action.args.sparql as string).trim() : ''
       if (rows != null && rows >= 0 && testedSparql && (rows > 0 || lastTestedRows < 0)) {
         // Prefer the most recent query that actually returned rows; else keep any tested one.

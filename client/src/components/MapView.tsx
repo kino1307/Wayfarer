@@ -389,7 +389,7 @@ function LoadingOverlay({ message }: { message: string }) {
             {message || 'Working…'}
           </span>
           <span style={{ fontFamily: "Helvetica, Arial, sans-serif", fontSize: 10, color: 'var(--ink-faint)', letterSpacing: '0.03em', marginTop: 3 }}>
-            building a verified map — this can take a moment
+            building a verified map, this can take a moment
           </span>
         </div>
       </div>
