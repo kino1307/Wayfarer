@@ -889,3 +889,26 @@ fallback}.ts`, with the legacy §6 machinery deleted.
   `structured`, `verified` — the deployed build behaves identically to local dev. DNS and TLS follow
   once the domain's `A` record points at the VPS; Caddy will auto-issue the Let's Encrypt cert on
   first resolution, no further action needed.
+
+- **Non-convergence could silently answer a broader question than asked ("active volcanoes in the
+  Pacific Ring of Fire" → active volcanoes anywhere).** Root cause: Wikidata has no direct
+  per-volcano membership relationship to the Ring of Fire (the only structural link is one hop
+  removed, via "American Cordillera"); the builder's own `search_entity` for "Ring of Fire" was
+  dominated by an unrelated song and concluded no geographic entity existed (wrong — it does,
+  Q18783, just not surfaced by that search string), so it never built a working geographic filter,
+  ran out of its step budget (`converged: false`), and fell back to the last query it HAD
+  successfully tested — which happened to be an early bare-class draft with zero Ring-of-Fire
+  constraint. That draft passed every existing safety check (`hasCoordBinding`: has `?where`, has
+  `wdt:P625`) because those checks only prove SCHEMA completeness, not that the query still
+  implements every named constraint the request had. Result: 32 volcanoes worldwide (Iceland,
+  Italy, the Canary Islands, Montserrat, …) mostly shown as clean `verified` pins, since the
+  sampling-based verification pass only spot-checks a handful of the total and missed most of the
+  non-Pacific outliers.
+  Fix: `coversResolvedAnchors()` (builder.ts) — every RESOLVED ENTITIES QID (any one of an
+  anchor's candidates, not necessarily the first-listed) must appear somewhere in the final SPARQL,
+  checked at all three places a query can become the answer (`answer` tool call, the forced final
+  attempt, and the `lastGoodTested` non-convergence fallback). A query that drops a resolved anchor
+  is now rejected the same way a query missing `?coord` already was — non-convergence degrades to
+  the honest asserted fallback (labelled, flagged) instead of silently shipping a wrong-scope
+  structured answer. Self-checked in `checks.ts` against the exact Ring of Fire case, plus the
+  "any candidate counts" and "all anchors, not just one" edge cases.

@@ -1,7 +1,7 @@
 // Runnable self-checks for the correctness fixes that have real edge-case risk.
 // Run: `npx tsx src/lib/checks.ts` from server/. No framework — asserts only.
 import assert from 'node:assert'
-import { impliesLimit } from './builder.js'
+import { impliesLimit, coversResolvedAnchors } from './builder.js'
 import { computeEnvelope } from './fallback.js'
 import type { Node } from './nodes.js'
 
@@ -33,5 +33,34 @@ assert(env!.minLng > -85 && env!.maxLat < 45, 'box should hug the US cluster')
 
 // And it must NOT form when there is no trustworthy core in the default (verified-only) mode.
 assert.equal(computeEnvelope(withOutlier), null, 'verified-only mode ignores geocoded pins')
+
+// coversResolvedAnchors: the Ring of Fire bug — a query missing the resolved anchor's QID must be
+// rejected, even though it's otherwise schema-complete (has ?where/?coord).
+const ringOfFireBlock = `RESOLVED ENTITIES — these are the ONLY correct Wikidata IDs for the named entities in
+the query. Pick the candidate that best fits the query context, and use its exact QID. NEVER
+invent or guess a QID for these names:
+- "Pacific Ring of Fire":
+    wd:Q18783 — Pacific Ring of Fire — region at edges of Pacific Ocean known for tectonic activity
+    wd:Q1473718 — Ring of Fire — song
+`
+const unconstrainedVolcanoQuery = '?where wdt:P31/wdt:P279* wd:Q1330974 . ?where wdt:P625 ?coord .'
+assert.equal(coversResolvedAnchors(unconstrainedVolcanoQuery, ringOfFireBlock), false,
+  'a query that never references Q18783 (or any other resolved candidate) must fail the anchor check')
+const constrainedVolcanoQuery = '?where wdt:P31/wdt:P279* wd:Q1330974 . ?where wdt:P131* wd:Q18783 . ?where wdt:P625 ?coord .'
+assert.equal(coversResolvedAnchors(constrainedVolcanoQuery, ringOfFireBlock), true,
+  'a query referencing the resolved QID passes')
+// A different resolved candidate for the same anchor (the agent picking Q1473718 instead of
+// Q18783) still counts — any candidate satisfies "this anchor was accounted for".
+const wrongCandidateQuery = '?where wdt:P31/wdt:P279* wd:Q1330974 . ?where wdt:P361 wd:Q1473718 . ?where wdt:P625 ?coord .'
+assert.equal(coversResolvedAnchors(wrongCandidateQuery, ringOfFireBlock), true,
+  'any resolved candidate for the anchor counts, not just the first-listed one')
+// Multiple anchors: ALL must be covered, not just one.
+const twoAnchorBlock = ringOfFireBlock + `- "Japan":\n    wd:Q17 — Japan — country in East Asia\n`
+assert.equal(coversResolvedAnchors(constrainedVolcanoQuery, twoAnchorBlock), false,
+  'covering only one of two resolved anchors must still fail')
+assert.equal(coversResolvedAnchors(constrainedVolcanoQuery + ' ?where wdt:P17 wd:Q17 .', twoAnchorBlock), true,
+  'covering every resolved anchor passes')
+// No anchors resolved at all (empty block) — nothing to check, must not false-reject.
+assert.equal(coversResolvedAnchors(unconstrainedVolcanoQuery, ''), true, 'no resolved anchors means nothing to enforce')
 
 console.log('checks.ts: all assertions passed')

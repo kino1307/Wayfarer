@@ -53,6 +53,22 @@ function hasCoordBinding(sparql: string): boolean {
   return /\?coord\b/.test(sparql) && /wdt:P625/.test(sparql)
 }
 
+// hasCoordBinding only proves a query is SCHEMA-complete (it has a chance at a coordinate) — it
+// says nothing about whether the query still implements every named constraint the request
+// actually had. A query that quietly drops a resolved anchor (e.g. "Pacific Ring of Fire" never
+// making it into the WHERE clause, silently widening "active volcanoes in the Ring of Fire" into
+// "active volcanoes anywhere") passes hasCoordBinding fine and used to get answered/accepted
+// as-is. Require every resolved anchor's QID (any one of its candidates — the agent may
+// legitimately pick a different candidate than the first) to appear somewhere in the query.
+export function coversResolvedAnchors(sparql: string, resolvedBlock: string): boolean {
+  const groups = resolvedBlock.split(/\n(?=- ")/).filter(g => g.trim().startsWith('- "'))
+  for (const group of groups) {
+    const qids = [...group.matchAll(/\bwd:(Q\d+)\b/g)].map(m => m[1])
+    if (qids.length && !qids.some(q => new RegExp(`\\bwd:${q}\\b`).test(sparql))) return false
+  }
+  return true
+}
+
 function parseAction(raw: string): { tool?: string; thought?: string; args?: Record<string, unknown> } | null {
   try {
     return parseJsonResponse(raw) as { tool?: string; thought?: string; args?: Record<string, unknown> }
@@ -275,6 +291,10 @@ export async function buildSparql(
         messages.push({ role: 'user', content: 'You must test_sparql before answering. Test this query first.' })
         continue
       }
+      if (!coversResolvedAnchors(sparql, resolvedBlock)) {
+        messages.push({ role: 'user', content: 'Your query does not reference any of the RESOLVED ENTITIES QIDs given at the start — a named constraint from the request got dropped. Add it back in, test, then answer.' })
+        continue
+      }
       steps.push({ tool, thought: action.thought, observation: 'answered' })
       logTiming()
       return { sparql: stripStrayLimit(query, sparql), steps, converged: true }
@@ -328,20 +348,23 @@ export async function buildSparql(
     )
     const action = parseAction(raw)
     const sparql = typeof action?.args?.sparql === 'string' ? (action.args.sparql as string).trim() : ''
-    if (sparql.includes('?where') && hasCoordBinding(sparql)) {
+    if (sparql.includes('?where') && hasCoordBinding(sparql) && coversResolvedAnchors(sparql, resolvedBlock)) {
       steps.push({ tool: 'answer', thought: 'forced final', observation: 'answered (forced)' })
       return { sparql: stripStrayLimit(query, sparql), steps, converged: false }
     }
   }
-  // Only a query that satisfies the output contract (has a chance at a real coordinate) is safe
-  // to use as a final answer — a bare shape-check draft (missing ?coord) is not, even if it
-  // returned rows; using it would silently force every result through the geocode/approximate
-  // ladder instead of the honest asserted fallback below.
-  if (lastGoodTested && lastGoodTested.includes('?where')) {
+  // Only a query that satisfies the output contract (has a chance at a real coordinate) AND still
+  // implements every resolved anchor is safe to use as a final answer — a bare shape-check draft
+  // (missing ?coord), or one that quietly dropped a named constraint, is not, even if it returned
+  // rows; using either would silently answer a broader/different question than what was asked,
+  // instead of the honest asserted fallback below.
+  if (lastGoodTested && lastGoodTested.includes('?where') && coversResolvedAnchors(lastGoodTested, resolvedBlock)) {
     console.log(`[builder] non-convergence; using last CONTRACT-COMPLIANT tested query (rows=${lastGoodTestedRows})`)
     return { sparql: stripStrayLimit(query, lastGoodTested), steps, converged: false }
   }
-  if (lastTested) {
+  if (lastGoodTested) {
+    console.log(`[builder] non-convergence; last tested query (rows=${lastGoodTestedRows}) dropped a resolved anchor — discarding rather than answering a broader question than asked`)
+  } else if (lastTested) {
     console.log(`[builder] non-convergence; last tested query (rows=${lastTestedRows}) is missing ?coord — discarding rather than emitting a query that can never verify`)
   }
   // No usable query at all → return empty rather than throwing, so the route degrades to the
