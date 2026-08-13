@@ -53,7 +53,7 @@ async function openaiChat(apiKey: string, model: string, system: string | undefi
         continue
       }
       console.error(`[openai] malformed response body after ${attempt + 1} attempt(s): ${raw}`)
-      throw new Error('OpenAI returned a corrupted response — please try again.')
+      throw new Error('OpenAI returned a corrupted response, please try again.')
     }
 
     recordUsage({ input: data.usage?.prompt_tokens ?? 0, output: data.usage?.completion_tokens ?? 0, cacheRead: 0, cacheWrite: 0 })

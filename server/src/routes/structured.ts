@@ -281,7 +281,7 @@ async function runStructuredPipeline(
         // being too heavy. The passive detector (wdqsThrottled) tells them apart — both used to look
         // like the same cryptic 408. Shown to the user only when nothing came back (client-side).
         sparqlError = wdqsThrottled()
-          ? 'Wikidata is rate-limiting us right now — please try again in a moment.'
+          ? 'Wikidata is rate-limiting us right now, please try again in a moment.'
           : 'That query was too broad or complex for Wikidata to answer in time. Try narrowing or rephrasing it.'
       } else {
         throw err
@@ -329,7 +329,7 @@ async function runStructuredPipeline(
 
   if (bindings.length > MAX_STRUCTURED_ROWS) {
     console.warn(`[structured] ${bindings.length} raw rows exceeds sanity cap (${MAX_STRUCTURED_ROWS}) — degrading to asserted enumeration instead of a runaway structured result`)
-    sparqlError = `This query matched an extremely large number of results (${bindings.length.toLocaleString()}) — too broad to verify and plot individually. Showing a curated set from model knowledge instead; try narrowing the query for a precise structured answer.`
+    sparqlError = `This query matched an extremely large number of results (${bindings.length.toLocaleString()}), too broad to verify and plot individually. Showing a curated set from model knowledge instead; try narrowing the query for a precise structured answer.`
     bindings = []
   }
 

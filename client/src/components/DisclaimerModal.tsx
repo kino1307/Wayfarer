@@ -63,20 +63,20 @@ export function DisclaimerModal({ onDismiss }: Props) {
           gap: 12,
         }}>
           <p style={{ margin: 0 }}>
-            Wayfarer uses an LLM (Claude or GPT — your choice) to translate your query into a <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>Wikidata</strong> query — a
-            structured, community-maintained knowledge base — then plots what Wikidata returns.
+            Wayfarer uses an LLM (Claude or GPT, your choice) to translate your query into a <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>Wikidata</strong> query,
+            a structured, community-maintained knowledge base, then plots what Wikidata returns.
             For well-modelled topics (capitals, members of a group, battles) the results are precise and grounded.
           </p>
           <p style={{ margin: 0 }}>
             When Wikidata has no data for a query (subjective or very recent topics), Wayfarer falls
             back to <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>the model's own knowledge</strong>. The model can sound confident while being
-            completely wrong — inventing places or members that do not exist. Those results are flagged.
+            completely wrong, inventing places or members that do not exist. Those results are flagged.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginTop: 2 }}>
             {[
               { dot: 'solid var(--accent)', fill: 'var(--accent)', label: 'Verified', desc: 'coordinate and membership confirmed by Wikidata' },
               { dot: 'solid #e8a33d', fill: '#e8a33d', label: 'Unverified location', desc: 'real entity, but coordinate is geocoded or estimated' },
-              { dot: 'dashed #e8a33d', fill: 'transparent', label: 'Model-suggested', desc: "the model's own guess — treat with scepticism" },
+              { dot: 'dashed #e8a33d', fill: 'transparent', label: 'Model-suggested', desc: "the model's own guess, treat with scepticism" },
             ].map(row => (
               <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                 <span style={{
@@ -85,7 +85,7 @@ export function DisclaimerModal({ onDismiss }: Props) {
                 }} />
                 <span style={{ fontSize: 13 }}>
                   <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>{row.label}</strong>
-                  <span style={{ color: 'var(--ink-faint)' }}> — {row.desc}</span>
+                  <span style={{ color: 'var(--ink-faint)' }}> · {row.desc}</span>
                 </span>
               </div>
             ))}

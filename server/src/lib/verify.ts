@@ -478,7 +478,7 @@ ${list}`
     for (const row of parsed as Array<{ i?: number; ok?: boolean; reason?: string }>) {
       if (row && row.ok === false && typeof row.i === 'number') {
         const it = items.find(x => x.i === row.i)
-        if (it) bad.set(it.uri, `independent check: not a genuine ${queryRole}${row.reason ? ` — ${row.reason}` : ''}`)
+        if (it) bad.set(it.uri, `independent check: not a genuine ${queryRole}${row.reason ? `, ${row.reason}` : ''}`)
       }
     }
   } catch {

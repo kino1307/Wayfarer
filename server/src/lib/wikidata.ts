@@ -132,7 +132,7 @@ export async function runSparql(query: string, opts: SparqlOpts = {}): Promise<S
           // call site that lets it bubble up uncaught (most of the agent loop doesn't have its
           // own translation) inherits the friendly wording for free.
           console.error(`[wdqs] malformed response body after ${attempt + 1} attempt(s): ${raw}`)
-          throw new SparqlError(502, 'Wikidata returned a corrupted response — please try again.')
+          throw new SparqlError(502, 'Wikidata returned a corrupted response, please try again.')
         }
       }
       const body = await res.text().catch(() => '')

@@ -36,7 +36,7 @@ function rateLimit(req: Request, res: Response, next: NextFunction): void {
   if (!h || now > h.reset) { hits.set(ip, { count: 1, reset: now + RATE_WINDOW_MS }); next(); return }
   if (h.count >= RATE_MAX) {
     res.setHeader('Retry-After', String(Math.ceil((h.reset - now) / 1000)))
-    res.status(429).json({ error: 'Rate limit exceeded — slow down and retry shortly.' })
+    res.status(429).json({ error: 'Rate limit exceeded, slow down and retry shortly.' })
     return
   }
   h.count++

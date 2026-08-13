@@ -307,7 +307,7 @@ export function Sidebar({
               </div>
               <div style={{ fontSize: 11, color: 'var(--ink-muted)', lineHeight: 1.5 }}>
                 Wikidata had no structured data for this query, so these were generated from
-                the model's knowledge. Treat them — and their coordinates — with scepticism.
+                the model's knowledge. Treat them, and their coordinates, with scepticism.
               </div>
             </div>
           )}
@@ -361,7 +361,7 @@ export function Sidebar({
                   marginBottom: 4,
                 }}
               >
-                ⚠ {result.unresolved.length} unresolved — no coordinate found
+                ⚠ {result.unresolved.length} unresolved, no coordinate found
               </div>
               <div style={{ fontSize: 11, color: 'var(--ink-muted)', lineHeight: 1.5 }}>
                 {result.unresolved.slice(0, 12).map(u => u.name).join(', ')}
